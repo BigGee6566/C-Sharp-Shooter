@@ -1,7 +1,7 @@
 <%@ Page Title="Book a Shipment" Language="C#" MasterPageFile="~/Site1.Master" AutoEventWireup="true" CodeBehind="BookShipment.aspx.cs" Inherits="ForteLogisticsApp.CustomerPortal.BookShipment" %>
 
 
-<asp:Content ID="Content1" ContentPlaceHolderID="head" runat="server">
+<asp:Content ID="Content1" ContentPlaceHolderID="HeadContent" runat="server">
     <style>
         .size-card-input:checked + .size-card {
             border-color: #003399;
@@ -294,50 +294,50 @@
     </div>
 
     <!-- Official Waybill Document Card -->
-    <div id="waybill-printable" class="bg-white p-6 rounded-xl border-2 border-slate-900 shadow-sm max-w-2xl mx-auto text-slate-900 font-sans">
+    <div id="waybill-printable" class="bg-white p-6 rounded-xl border-2 border-primary shadow-sm max-w-2xl mx-auto text-on-surface font-sans">
         
         <!-- Waybill Header -->
-        <div class="flex justify-between items-start border-b-2 border-slate-900 pb-4 mb-4">
+        <div class="flex justify-between items-start border-b-2 border-primary pb-4 mb-4">
             <div>
-                <h1 class="text-2xl font-black tracking-wider uppercase text-slate-900">LOGISTICORE</h1>
-                <p class="text-xs text-slate-500 font-semibold">WAYBILL & PROOF OF DELIVERY</p>
+                <h1 class="text-2xl font-black tracking-wider uppercase text-on-surface">LOGISTICORE</h1>
+                <p class="text-xs text-on-surface-variant font-semibold">WAYBILL & PROOF OF DELIVERY</p>
             </div>
             <div class="text-right">
-                <span class="text-xs text-slate-500 block uppercase tracking-wider">Date Booked</span>
-                <asp:Label ID="lblWaybillDate" runat="server" CssClass="text-sm font-bold text-slate-900" />
+                <span class="text-xs text-on-surface-variant block uppercase tracking-wider">Date Booked</span>
+                <asp:Label ID="lblWaybillDate" runat="server" CssClass="text-sm font-bold text-on-surface" />
             </div>
         </div>
 
         <!-- Barcode Section -->
-        <div class="text-center bg-slate-50 p-4 rounded-lg border border-slate-300 mb-6">
-            <div class="text-xs text-slate-500 font-semibold mb-1 uppercase tracking-wider">Tracking Number</div>
-            <asp:Label ID="lblWaybillTracking" runat="server" Font-Bold="true" CssClass="font-mono text-2xl tracking-widest text-slate-900 block mb-2" />
+        <div class="text-center bg-surface-container-low p-4 rounded-lg border border-outline-variant mb-6">
+            <div class="text-xs text-on-surface-variant font-semibold mb-1 uppercase tracking-wider">Tracking Number</div>
+            <asp:Label ID="lblWaybillTracking" runat="server" Font-Bold="true" CssClass="font-mono text-2xl tracking-widest text-on-surface block mb-2" />
             
             <!-- Generated Barcode Image -->
             <svg id="waybillBarcode" class="mx-auto h-16 max-w-full"></svg>
         </div>
 
         <!-- Addresses Grid -->
-        <div class="grid grid-cols-2 gap-4 border-b border-slate-200 pb-4 mb-4">
+        <div class="grid grid-cols-2 gap-4 border-b border-outline-variant pb-4 mb-4">
             <!-- Collection Address -->
-            <div class="bg-slate-50 p-3 rounded-lg border border-slate-200">
-                <span class="text-[10px] font-bold uppercase text-slate-500 block mb-1">1. Collection Address (From)</span>
-                <div class="font-bold text-sm text-slate-900">
+            <div class="bg-surface-container-low p-3 rounded-lg border border-outline-variant">
+                <span class="text-[10px] font-bold uppercase text-on-surface-variant block mb-1">1. Collection Address (From)</span>
+                <div class="font-bold text-sm text-on-surface">
                     <asp:Label ID="lblWaybillSenderName" runat="server" Text="Sender" /><br />
                 </div>
-                <div class="text-xs text-slate-700 mt-1 space-y-0.5">
+                <div class="text-xs text-on-surface mt-1 space-y-0.5">
                     <asp:Label ID="lblWaybillPickupStreet" runat="server" CssClass="block" /><br />
                     <asp:Label ID="lblWaybillPickupCity" runat="server" /> <asp:Label ID="lblWaybillPickupPostal" runat="server" />
                 </div>
             </div>
 
             <!-- Delivery Address -->
-            <div class="bg-slate-50 p-3 rounded-lg border border-slate-200">
-                <span class="text-[10px] font-bold uppercase text-slate-500 block mb-1">2. Delivery Address (To)</span>
-                <div class="font-bold text-sm text-slate-900">
+            <div class="bg-surface-container-low p-3 rounded-lg border border-outline-variant">
+                <span class="text-[10px] font-bold uppercase text-on-surface-variant block mb-1">2. Delivery Address (To)</span>
+                <div class="font-bold text-sm text-on-surface">
                     <asp:Label ID="lblWaybillReceiverName" runat="server" Text="Recipient" /><br />
                 </div>
-                <div class="text-xs text-slate-700 mt-1 space-y-0.5">
+                <div class="text-xs text-on-surface mt-1 space-y-0.5">
                     <asp:Label ID="lblWaybillDeliveryStreet" runat="server" CssClass="block" /><br />
                     <asp:Label ID="lblWaybillDeliveryCity" runat="server" /> <asp:Label ID="lblWaybillDeliveryPostal" runat="server" />
                 </div>
@@ -345,30 +345,30 @@
         </div>
 
         <!-- Parcel & Service Details Table -->
-        <div class="grid grid-cols-3 gap-3 text-xs text-slate-700 mb-6">
-            <div class="p-2 border border-slate-200 rounded">
-                <span class="text-[10px] font-semibold text-slate-500 block">Parcel Category</span>
-                <asp:Label ID="lblWaybillSize" runat="server" Font-Bold="true" CssClass="text-slate-900" />
+        <div class="grid grid-cols-3 gap-3 text-xs text-on-surface mb-6">
+            <div class="p-2 border border-outline-variant rounded">
+                <span class="text-[10px] font-semibold text-on-surface-variant block">Parcel Category</span>
+                <asp:Label ID="lblWaybillSize" runat="server" Font-Bold="true" CssClass="text-on-surface" />
             </div>
-            <div class="p-2 border border-slate-200 rounded">
-                <span class="text-[10px] font-semibold text-slate-500 block">Payment Status</span>
+            <div class="p-2 border border-outline-variant rounded">
+                <span class="text-[10px] font-semibold text-on-surface-variant block">Payment Status</span>
                 <span class="font-bold text-emerald-700 uppercase">Paid / Confirmed</span>
             </div>
-            <div class="p-2 border border-slate-200 rounded">
-                <span class="text-[10px] font-semibold text-slate-500 block">Amount Paid</span>
-                <asp:Label ID="lblWaybillAmount" runat="server" Font-Bold="true" CssClass="text-slate-900" />
+            <div class="p-2 border border-outline-variant rounded">
+                <span class="text-[10px] font-semibold text-on-surface-variant block">Amount Paid</span>
+                <asp:Label ID="lblWaybillAmount" runat="server" Font-Bold="true" CssClass="text-on-surface" />
             </div>
         </div>
 
         <!-- Driver Signature Box -->
-        <div class="grid grid-cols-2 gap-4 pt-2 border-t border-dashed border-slate-300 text-xs text-slate-500">
+        <div class="grid grid-cols-2 gap-4 pt-2 border-t border-dashed border-outline-variant text-xs text-on-surface-variant">
             <div>
                 <span class="block text-[10px] uppercase font-semibold">Driver Signature:</span>
-                <div class="h-8 border-b border-slate-400 mt-1"></div>
+                <div class="h-8 border-b border-outline mt-1"></div>
             </div>
             <div>
                 <span class="block text-[10px] uppercase font-semibold">Receiver Signature:</span>
-                <div class="h-8 border-b border-slate-400 mt-1"></div>
+                <div class="h-8 border-b border-outline mt-1"></div>
             </div>
         </div>
     </div>

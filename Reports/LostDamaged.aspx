@@ -9,11 +9,11 @@
             <div style="font-size:11px; color:#444">Generated: <%= DateTime.Now.ToString("dd MMM yyyy HH:mm") %></div>
         </div>
 
-        <p class="text-xs text-gray-500 mb-1 no-print"><span class="material-symbols-outlined mr-1">home</span> Home / Reports / <span class="text-brandRed font-semibold">Lost / Damaged</span></p>
+        <p class="text-xs text-on-surface-variant mb-1 no-print"><span class="material-symbols-outlined mr-1">home</span> Home / Reports / <span class="text-brandRed font-semibold">Lost / Damaged</span></p>
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
             <div>
                 <h1 class="text-2xl font-black text-brandDark">Lost / Damaged Parcel Exceptions</h1>
-                <p class="text-gray-600 text-sm">Parcels flagged as lost or damaged that require attention.</p>
+                <p class="text-on-surface-variant text-sm">Parcels flagged as lost or damaged that require attention.</p>
             </div>
             <div class="flex items-center gap-2 no-print">
                 <asp:Button ID="btnExport" runat="server" Text="Export CSV" OnClick="btnExport_Click" CssClass="fcl-btn fcl-btn-dark" />
@@ -22,15 +22,15 @@
         </div>
 
         <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-            <div class="fcl-card rounded-xl p-4"><div class="text-xs font-bold uppercase text-gray-500">Damaged</div><div class="text-2xl font-black text-amber-600"><asp:Literal ID="litDamaged" runat="server">0</asp:Literal></div></div>
-            <div class="fcl-card rounded-xl p-4"><div class="text-xs font-bold uppercase text-gray-500">Lost</div><div class="text-2xl font-black text-brandRed"><asp:Literal ID="litLost" runat="server">0</asp:Literal></div></div>
-            <div class="fcl-card rounded-xl p-4"><div class="text-xs font-bold uppercase text-gray-500">Total Exceptions</div><div class="text-2xl font-black text-brandDark"><asp:Literal ID="litTotal" runat="server">0</asp:Literal></div></div>
+            <div class="fcl-card rounded-xl p-4"><div class="text-xs font-bold uppercase text-on-surface-variant">Damaged</div><div class="text-2xl font-black text-amber-600"><asp:Literal ID="litDamaged" runat="server">0</asp:Literal></div></div>
+            <div class="fcl-card rounded-xl p-4"><div class="text-xs font-bold uppercase text-on-surface-variant">Lost</div><div class="text-2xl font-black text-brandRed"><asp:Literal ID="litLost" runat="server">0</asp:Literal></div></div>
+            <div class="fcl-card rounded-xl p-4"><div class="text-xs font-bold uppercase text-on-surface-variant">Total Exceptions</div><div class="text-2xl font-black text-brandDark"><asp:Literal ID="litTotal" runat="server">0</asp:Literal></div></div>
         </div>
 
         <div class="fcl-card rounded-xl p-6 overflow-x-auto">
             <asp:GridView ID="gv" runat="server" AutoGenerateColumns="true" CssClass="report-table" GridLines="None" UseAccessibleHeader="true"></asp:GridView>
-            <asp:Panel ID="pnlEmpty" runat="server" Visible="false" CssClass="text-center text-gray-500 text-sm py-8">
-                <span class="material-symbols-outlined ms-24 text-green-600 mb-2">check_circle</span>
+            <asp:Panel ID="pnlEmpty" runat="server" Visible="false" CssClass="text-center text-on-surface-variant text-sm py-8">
+                <span class="material-symbols-outlined ms-24 text-emerald-700 mb-2">check_circle</span>
                 <p>No lost or damaged parcels. Everything is on track.</p>
             </asp:Panel>
         </div>

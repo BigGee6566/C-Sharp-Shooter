@@ -9,11 +9,11 @@
             <div style="font-size:11px; color:#444">Generated: <%= DateTime.Now.ToString("dd MMM yyyy HH:mm") %></div>
         </div>
 
-        <p class="text-xs text-gray-500 mb-1 no-print"><span class="material-symbols-outlined mr-1">home</span> Home / Reports / <span class="text-brandRed font-semibold">Driver Performance</span></p>
+        <p class="text-xs text-on-surface-variant mb-1 no-print"><span class="material-symbols-outlined mr-1">home</span> Home / Reports / <span class="text-brandRed font-semibold">Driver Performance</span></p>
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
             <div>
                 <h1 class="text-2xl font-black text-brandDark">Driver Performance Summary</h1>
-                <p class="text-gray-600 text-sm">Delivery outcomes and success rate per driver.</p>
+                <p class="text-on-surface-variant text-sm">Delivery outcomes and success rate per driver.</p>
             </div>
             <div class="flex items-center gap-2 no-print">
                 <asp:Button ID="btnExport" runat="server" Text="Export CSV" OnClick="btnExport_Click" CssClass="fcl-btn fcl-btn-dark" />
@@ -23,7 +23,7 @@
 
         <div class="fcl-card rounded-xl p-6 overflow-x-auto">
             <asp:GridView ID="gv" runat="server" AutoGenerateColumns="true" CssClass="report-table" GridLines="None" UseAccessibleHeader="true"></asp:GridView>
-            <asp:Panel ID="pnlEmpty" runat="server" Visible="false" CssClass="text-center text-gray-500 text-sm py-8">No driver data available.</asp:Panel>
+            <asp:Panel ID="pnlEmpty" runat="server" Visible="false" CssClass="text-center text-on-surface-variant text-sm py-8">No driver data available.</asp:Panel>
         </div>
     </div>
 </asp:Content>

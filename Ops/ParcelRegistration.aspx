@@ -2,16 +2,16 @@
 
 <asp:Content ID="c1" ContentPlaceHolderID="MainContent" runat="server">
     <div class="max-w-5xl mx-auto px-4 py-8">
-        <p class="text-xs text-gray-500 mb-1"><span class="material-symbols-outlined mr-1">home</span> Home / <a href='<%= ResolveUrl("~/Ops/Dashboard.aspx") %>' class="hover:text-brandRed">Operations</a> / <span class="text-brandRed font-semibold">Parcel Registration</span></p>
+        <p class="text-xs text-on-surface-variant mb-1"><span class="material-symbols-outlined mr-1">home</span> Home / <a href='<%= ResolveUrl("~/Ops/Dashboard.aspx") %>' class="hover:text-brandRed">Operations</a> / <span class="text-brandRed font-semibold">Parcel Registration</span></p>
         <h1 class="text-2xl font-black text-brandDark mb-1">Parcel Registration & Barcode</h1>
-        <p class="text-gray-600 text-sm mb-6">Capture a walk-in parcel at intake. A unique waybill and scannable barcode are generated automatically.</p>
+        <p class="text-on-surface-variant text-sm mb-6">Capture a walk-in parcel at intake. A unique waybill and scannable barcode are generated automatically.</p>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div class="lg:col-span-2 fcl-card rounded-xl p-6">
                 <%-- Matching the sender to an account is what lets automatic invoicing and
                      status notifications reach them, exactly as for an online booking. --%>
-                <div class="mb-4 pb-4 border-b border-gray-200">
-                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Sender Account Lookup (email or phone)</label>
+                <div class="mb-4 pb-4 border-b border-outline-variant">
+                    <label class="block text-xs font-bold text-on-surface uppercase mb-1">Sender Account Lookup (email or phone)</label>
                     <div class="flex gap-2">
                         <asp:TextBox ID="txtSenderLookup" runat="server" CssClass="fcl-input"
                             placeholder="customer@fcl.co.za or 0821234567"></asp:TextBox>
@@ -24,40 +24,40 @@
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Sender Name *</label>
+                        <label class="block text-xs font-bold text-on-surface uppercase mb-1">Sender Name *</label>
                         <asp:TextBox ID="txtSender" runat="server" CssClass="fcl-input"></asp:TextBox>
                         <asp:RequiredFieldValidator runat="server" ControlToValidate="txtSender" ValidationGroup="reg"
                             Display="Dynamic" ErrorMessage="Sender name is required."
-                            CssClass="block text-xs mt-1 text-red-600 font-bold" />
+                            CssClass="block text-xs mt-1 text-error font-bold" />
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Recipient Name *</label>
+                        <label class="block text-xs font-bold text-on-surface uppercase mb-1">Recipient Name *</label>
                         <asp:TextBox ID="txtReceiver" runat="server" CssClass="fcl-input"></asp:TextBox>
                         <asp:RequiredFieldValidator runat="server" ControlToValidate="txtReceiver" ValidationGroup="reg"
                             Display="Dynamic" ErrorMessage="Recipient name is required."
-                            CssClass="block text-xs mt-1 text-red-600 font-bold" />
+                            CssClass="block text-xs mt-1 text-error font-bold" />
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Pickup Address</label>
+                        <label class="block text-xs font-bold text-on-surface uppercase mb-1">Pickup Address</label>
                         <asp:TextBox ID="txtPickup" runat="server" CssClass="fcl-input"></asp:TextBox>
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Delivery Address *</label>
+                        <label class="block text-xs font-bold text-on-surface uppercase mb-1">Delivery Address *</label>
                         <asp:TextBox ID="txtDelivery" runat="server" CssClass="fcl-input"></asp:TextBox>
                         <asp:RequiredFieldValidator runat="server" ControlToValidate="txtDelivery" ValidationGroup="reg"
                             Display="Dynamic" ErrorMessage="Delivery address is required."
-                            CssClass="block text-xs mt-1 text-red-600 font-bold" />
+                            CssClass="block text-xs mt-1 text-error font-bold" />
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Origin City</label>
+                        <label class="block text-xs font-bold text-on-surface uppercase mb-1">Origin City</label>
                         <asp:DropDownList ID="ddlOrigin" runat="server" CssClass="fcl-input"></asp:DropDownList>
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Destination City</label>
+                        <label class="block text-xs font-bold text-on-surface uppercase mb-1">Destination City</label>
                         <asp:DropDownList ID="ddlDest" runat="server" CssClass="fcl-input"></asp:DropDownList>
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Weight (KG) *</label>
+                        <label class="block text-xs font-bold text-on-surface uppercase mb-1">Weight (KG) *</label>
                         <asp:TextBox ID="txtWeight" runat="server" TextMode="Number" Text="1" CssClass="fcl-input"></asp:TextBox>
                         <%-- A RangeValidator parses its bounds with the server culture; under en-ZA
                          "0.1" is not a valid number and the page throws. A pattern check is
@@ -65,10 +65,10 @@
                     <asp:RegularExpressionValidator runat="server" ControlToValidate="txtWeight" ValidationGroup="reg"
                         Display="Dynamic" ValidationExpression="^\d{1,4}([.,]\d{1,3})?$"
                         ErrorMessage="Enter a weight in kg, e.g. 3.5"
-                        CssClass="block text-xs mt-1 text-red-600 font-bold" />
+                        CssClass="block text-xs mt-1 text-error font-bold" />
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Parcel Description</label>
+                        <label class="block text-xs font-bold text-on-surface uppercase mb-1">Parcel Description</label>
                         <asp:TextBox ID="txtDescription" runat="server" CssClass="fcl-input"></asp:TextBox>
                     </div>
                 </div>
@@ -83,12 +83,12 @@
             <div class="fcl-card rounded-xl p-6">
                 <h2 class="font-bold text-lg text-brandDark mb-3">Parcel Label</h2>
                 <asp:Panel ID="pnlLabel" runat="server" Visible="false">
-                    <div id="labelArea" class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                    <div id="labelArea" class="border-2 border-dashed border-outline-variant rounded-lg p-4 text-center">
                         <div class="bg-brandRed text-white font-black inline-block px-2 py-1 rounded text-sm mb-2">FCL</div>
-                        <div class="text-xs text-gray-500 uppercase">Waybill</div>
+                        <div class="text-xs text-on-surface-variant uppercase">Waybill</div>
                         <div class="font-black text-brandDark text-lg mb-2"><asp:Literal ID="litWaybill" runat="server"></asp:Literal></div>
                         <svg id="barcode"></svg>
-                        <div class="text-xs text-gray-600 mt-2"><asp:Literal ID="litRoute" runat="server"></asp:Literal></div>
+                        <div class="text-xs text-on-surface-variant mt-2"><asp:Literal ID="litRoute" runat="server"></asp:Literal></div>
                     </div>
                     <button type="button" onclick="printLabel()" class="fcl-btn fcl-btn-dark w-full mt-4"><span class="material-symbols-outlined mr-1">print</span> Print Label</button>
                     <script>
@@ -103,7 +103,7 @@
                         }
                     </script>
                 </asp:Panel>
-                <asp:Panel ID="pnlNoLabel" runat="server" CssClass="text-center text-gray-400 text-sm py-8">
+                <asp:Panel ID="pnlNoLabel" runat="server" CssClass="text-center text-outline text-sm py-8">
                     <span class="material-symbols-outlined ms-32 mb-2">barcode</span>
                     <p>Register a parcel to generate its barcode label.</p>
                 </asp:Panel>

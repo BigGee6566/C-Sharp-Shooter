@@ -4,11 +4,11 @@
     <div class="max-w-xl mx-auto px-4 py-16 text-center">
         <span class="material-symbols-outlined ms-32 text-brandRed mb-4">warning</span>
         <h1 class="text-2xl font-black text-brandDark mb-2">Something went wrong</h1>
-        <p class="text-gray-600 text-sm mb-6">
+        <p class="text-on-surface-variant text-sm mb-6">
             We could not complete that request. The problem has been recorded and our team
             can look into it. Please try again, or contact support if it keeps happening.
         </p>
-        <p class="text-xs text-gray-500 mb-6">
+        <p class="text-xs text-on-surface-variant mb-6">
             Reference: <span class="font-mono font-bold text-brandDark"><asp:Literal ID="litRef" runat="server"></asp:Literal></span>
         </p>
         <div class="flex items-center justify-center gap-4">
