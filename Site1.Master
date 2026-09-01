@@ -1,4 +1,4 @@
-<%@ Master Language="C#" AutoEventWireup="true" CodeBehind="Site1.master.cs" Inherits="ForteLogisticsApp.SiteMaster" %>
+<%@ Master Language="C#" AutoEventWireup="true" CodeBehind="Site1.Master.cs" Inherits="ForteLogisticsApp.SiteMaster" %>
 
 <!DOCTYPE html>
 <html lang="en">
@@ -8,184 +8,380 @@
     <title>Logisticore Courier Service</title>
     <link rel="icon" type="image/jpeg" href="<%= ResolveUrl("~/Images/logisticore-logo.jpg") %>" />
 
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tailwind CSS CDN (forms + container-queries plugins). Loaded once. -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <!-- Typography: Hanken Grotesk (headlines) + Inter (body/labels), per LogistiCore V5 -->
     <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
     <!-- Material Symbols Outlined (icon system) -->
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
-    <!-- JsBarcode (Code128 barcode rendering) -->
+    <!-- JsBarcode (Code128 barcode rendering, used by the waybill step of Book Shipment) -->
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
 
-    
-    <!-- External Fonts & Scripts -->
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
-
-    <!-- Tailwind Config -->
     <script id="tailwind-config">
+        /* Design tokens ported from LogistiCoreV5 Site.Master tailwind config, 2026-08-31. */
         tailwind.config = {
-            darkMode: "class",
             theme: {
                 extend: {
                     "colors": {
-                        "error-container": "#ffdad6",
-                        "inverse-on-surface": "#f0f0f3",
-                        "on-background": "#1a1c1e",
-                        "primary-fixed-dim": "#b5c4ff",
-                        "tertiary-fixed-dim": "#e1b6ff",
-                        "surface-tint": "#3557bc",
-                        "surface-dim": "#dadadc",
-                        "inverse-surface": "#2f3133",
-                        "on-surface": "#1a1c1e",
-                        "on-secondary-fixed-variant": "#8e004b",
-                        "on-tertiary-container": "#cb8ef8",
-                        "error": "#ba1a1a",
+                        /* --- LogistiCore V5 Material Design 3 token set --- */
                         "primary": "#002068",
-                        "secondary-fixed-dim": "#ffb0c9",
-                        "on-tertiary-fixed-variant": "#632a8e",
-                        "on-primary-fixed": "#00164e",
-                        "on-primary": "#ffffff",
-                        "outline": "#747684",
-                        "on-primary-fixed-variant": "#153ea3",
-                        "on-error": "#ffffff",
-                        "surface-variant": "#e2e2e5",
-                        "tertiary": "#3f0067",
-                        "inverse-primary": "#b5c4ff",
-                        "on-surface-variant": "#444653",
-                        "surface-container": "#eeeef0",
-                        "on-tertiary-fixed": "#2e004d",
                         "primary-container": "#003399",
-                        "secondary-fixed": "#ffd9e2",
-                        "on-secondary": "#ffffff",
-                        "on-error-container": "#93000a",
-                        "tertiary-container": "#581e83",
-                        "outline-variant": "#c4c5d5",
-                        "secondary": "#b50062",
-                        "tertiary-fixed": "#f2daff",
-                        "on-secondary-container": "#fffbff",
-                        "surface": "#f9f9fc",
-                        "on-secondary-fixed": "#3e001e",
-                        "surface-container-high": "#e8e8ea",
                         "primary-fixed": "#dce1ff",
-                        "on-tertiary": "#ffffff",
-                        "background": "#f9f9fc",
-                        "surface-bright": "#f9f9fc",
-                        "surface-container-low": "#f3f3f6",
+                        "primary-fixed-dim": "#b5c4ff",
+                        "on-primary": "#ffffff",
                         "on-primary-container": "#8aa4ff",
+                        "on-primary-fixed": "#00164e",
+                        "on-primary-fixed-variant": "#153ea3",
+                        "inverse-primary": "#b5c4ff",
+                        "secondary": "#b50062",
+                        "secondary-container": "#e2007c",
+                        "secondary-fixed": "#ffd9e2",
+                        "secondary-fixed-dim": "#ffb0c9",
+                        "on-secondary": "#ffffff",
+                        "on-secondary-container": "#fffbff",
+                        "on-secondary-fixed": "#3e001e",
+                        "on-secondary-fixed-variant": "#8e004b",
+                        "tertiary": "#3f0067",
+                        "tertiary-container": "#581e83",
+                        "tertiary-fixed": "#f2daff",
+                        "tertiary-fixed-dim": "#e1b6ff",
+                        "on-tertiary": "#ffffff",
+                        "on-tertiary-container": "#cb8ef8",
+                        "on-tertiary-fixed": "#2e004d",
+                        "on-tertiary-fixed-variant": "#632a8e",
+                        "error": "#ba1a1a",
+                        "error-container": "#ffdad6",
+                        "on-error": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "background": "#f9f9fc",
+                        "on-background": "#1a1c1e",
+                        "surface": "#f9f9fc",
+                        "surface-bright": "#f9f9fc",
+                        "surface-dim": "#dadadc",
+                        "surface-tint": "#3557bc",
+                        "surface-variant": "#e2e2e5",
+                        "surface-container": "#eeeef0",
+                        "surface-container-low": "#f3f3f6",
+                        "surface-container-high": "#e8e8ea",
                         "surface-container-highest": "#e2e2e5",
                         "surface-container-lowest": "#ffffff",
-                        "secondary-container": "#e2007c"
+                        "on-surface": "#1a1c1e",
+                        "on-surface-variant": "#444653",
+                        "inverse-surface": "#2f3133",
+                        "inverse-on-surface": "#f0f0f3",
+                        "outline": "#747684",
+                        "outline-variant": "#c4c5d5",
+
+                        /* --- Legacy aliases: existing markup still uses these names.
+                               Each points at the V5 token noted beside it. --- */
+                        "brandRed": "#002068",      /* = primary */
+                        "brandDarkRed": "#003399",  /* = primary-container (hover) */
+                        "brandDark": "#00164e",     /* = on-primary-fixed */
+                        "brandGray": "#f9f9fc",     /* = surface */
+                        "brandAccent": "#b50062"    /* = secondary */
                     },
                     "borderRadius": {
+                        /* V5's scale, except `full`. V5 sets full to 0.75rem, but this app uses
+                           rounded-full for carousel dots, timeline markers, the notification
+                           bubble and status pills - all of which must stay genuinely round. */
                         "DEFAULT": "0.125rem",
                         "lg": "0.25rem",
                         "xl": "0.5rem",
-                        "full": "0.75rem"
+                        "full": "9999px"
                     },
                     "spacing": {
-                        "margin-mobile": "16px",
-                        "gutter": "24px",
-                        "container-max": "1280px",
                         "base": "8px",
                         "stack-sm": "12px",
                         "stack-md": "24px",
+                        "stack-lg": "48px",
+                        "gutter": "24px",
+                        "margin-mobile": "16px",
                         "margin-desktop": "40px",
-                        "stack-lg": "48px"
+                        "container-max": "1280px"
                     },
                     "fontFamily": {
-                        "headline-lg-mobile": ["Hanken Grotesk"],
-                        "headline-xl": ["Hanken Grotesk"],
-                        "label-md": ["Inter"],
-                        "headline-lg": ["Hanken Grotesk"],
-                        "body-md": ["Inter"],
-                        "headline-md": ["Hanken Grotesk"],
-                        "label-sm": ["Inter"],
-                        "body-lg": ["Inter"]
+                        "headline-xl": ["Hanken Grotesk", "sans-serif"],
+                        "headline-lg": ["Hanken Grotesk", "sans-serif"],
+                        "headline-lg-mobile": ["Hanken Grotesk", "sans-serif"],
+                        "headline-md": ["Hanken Grotesk", "sans-serif"],
+                        "body-lg": ["Inter", "sans-serif"],
+                        "body-md": ["Inter", "sans-serif"],
+                        "label-md": ["Inter", "sans-serif"],
+                        "label-sm": ["Inter", "sans-serif"]
                     },
                     "fontSize": {
-                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
                         "headline-xl": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
-                        "label-md": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
                         "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
-                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
                         "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
-                        "label-sm": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
-                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }]
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "label-md": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "fontWeight": "500" }]
                     }
                 }
             }
         }
     </script>
-    <asp:ContentPlaceHolder ID="head" runat="server">
+
+    <style>
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+        }
+        .tab-active {
+            border-bottom: 3px solid #b50062;
+            color: #b50062;
+            font-weight: 700;
+        }
+        .hero-glass {
+            background: rgba(0, 22, 78, 0.65);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .hover-glow:hover {
+            box-shadow: 0 0 0 2px rgba(181, 0, 98, 0.3);
+            transition: 0.2s;
+        }
+        .carousel-slide {
+            transition: opacity 0.7s ease-in-out;
+        }
+        .glass-image-card {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+        }
+        .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        /* ---------------------------------------------------------------
+           Reusable card / form / table components.
+           Class names are unchanged so all existing markup keeps resolving;
+           only the rules behind them move to the LogistiCore V5 design system.
+           --------------------------------------------------------------- */
+
+        /* Cards and containers */
+        .fcl-card {
+            background: #ffffff;
+            border: 1px solid #c4c5d5;
+            border-radius: 0.5rem;              /* 8px */
+            padding: 24px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            transition: box-shadow 0.2s ease;
+        }
+        .fcl-card:hover { box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12); }
+
+        /* Form inputs */
+        .fcl-input {
+            width: 100%;
+            background: #ffffff;
+            color: #1a1c1e;
+            border: 1px solid #c4c5d5;
+            border-radius: 0.25rem;             /* 4px */
+            padding: 8px 12px;
+            font-family: "Inter", sans-serif;
+            font-size: 14px;
+            line-height: 20px;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+        .fcl-input::placeholder { color: #747684; opacity: 0.6; }
+        .fcl-input:focus {
+            outline: none;
+            border-color: #002068;
+            /* Ring rather than a thicker border, so focus never shifts layout. */
+            box-shadow: 0 0 0 3px rgba(0, 32, 104, 0.15);
+        }
+        .fcl-input:disabled { background: #f3f3f6; color: #747684; cursor: not-allowed; }
+
+        /* Buttons - primary */
+        .fcl-btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+            min-height: 44px;                   /* touch target, spec 4 */
+            background: #002068; color: #ffffff;
+            font-family: "Inter", sans-serif; font-weight: 600; font-size: 12px;
+            letter-spacing: 0.03em; text-transform: uppercase;
+            padding: 0.65rem 1.25rem;
+            border: 1px solid transparent;
+            border-radius: 0.5rem;              /* 8px */
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            transition: background 0.2s ease, box-shadow 0.2s ease;
+        }
+        .fcl-btn:hover { background: #003399; box-shadow: 0 6px 16px rgba(0, 32, 104, 0.25); }
+
+        /* Buttons - secondary. Applied alongside .fcl-btn, and defined after it so it wins. */
+        .fcl-btn-dark {
+            background: transparent; color: #002068; border: 1px solid #002068; box-shadow: none;
+        }
+        .fcl-btn-dark:hover { background: #f3f3f6; color: #002068; box-shadow: none; }
+
+        /* Buttons - danger */
+        .fcl-btn-danger { background: #ba1a1a; color: #ffffff; border-color: transparent; }
+        .fcl-btn-danger:hover { background: #93000a; }
+
+        /* Buttons - disabled (covers both <button> and asp:Button Enabled="false") */
+        .fcl-btn:disabled, .fcl-btn[disabled], .fcl-btn.aspNetDisabled {
+            opacity: 0.5; background: #9e9e9e; color: #ffffff;
+            box-shadow: none; cursor: not-allowed; pointer-events: none;
+        }
+
+        /* Alerts (spec 9). Paired with UiHelper.AlertClass in the code-behind. */
+        .fcl-alert {
+            display: block; padding: 12px 16px; border-radius: 0.5rem;
+            font-family: "Inter", sans-serif; font-size: 14px; line-height: 20px; font-weight: 500;
+            border: 1px solid transparent;
+        }
+        .fcl-alert-success { background: #c8e6c9; border-color: #4caf50; color: #1b5e20; }
+        .fcl-alert-error   { background: #ffdad6; border-color: #ba1a1a; color: #93000a; }
+        .fcl-alert-warning { background: #ffe0b2; border-color: #ef6c00; color: #7a3d00; }
+        .fcl-alert-info    { background: #bbdefb; border-color: #002068; color: #002068; }
+
+        /* Data tables (spec 12) */
+        .report-table { width: 100%; text-align: left; border-collapse: collapse; font-family: "Inter", sans-serif; font-size: 14px; }
+        .report-table th {
+            background: #f3f3f6; color: #444653;
+            text-transform: uppercase; font-size: 12px; font-weight: 600; letter-spacing: 0.03em;
+            border-bottom: 1px solid #e2e2e5; padding: 12px 16px;
+        }
+        .report-table td { padding: 12px 16px; border-bottom: 1px solid #e2e2e5; color: #1a1c1e; }
+        .report-table tbody tr { background: #ffffff; transition: background 0.15s ease; }
+        .report-table tbody tr:hover { background: #f9f9fc; }
+
+        /* Links (spec 15) */
+        .fcl-link { color: #002068; text-decoration: none; }
+        .fcl-link:hover { text-decoration: underline; }
+
+        /* Material Symbols default sizing/alignment */
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            font-size: 20px; line-height: 1; vertical-align: middle;
+        }
+        .ms-24 { font-size: 24px; }
+        .ms-32 { font-size: 32px; }
+        .print-only { display: none; }
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+        }
+
+        /* ---------------------------------------------------------------
+           Sidebar navigation (LogistiCore V5 shell).
+           BuildNav() in the code-behind emits .fcl-nav-link / .fcl-nav-link-active.
+           --------------------------------------------------------------- */
+        .fcl-nav-link {
+            display: flex; align-items: center; gap: 8px; padding: 8px;
+            color: #444653; border-radius: 0.25rem;
+            font-family: "Inter", sans-serif; font-size: 14px; line-height: 20px; font-weight: 600;
+            text-decoration: none; transition: background 0.2s ease, color 0.2s ease;
+        }
+        .fcl-nav-link:hover { background: #e2e2e5; color: #1a1c1e; }
+        .fcl-nav-link:focus-visible { outline: 2px solid #dce1ff; outline-offset: 2px; }
+        .fcl-nav-link-active { background: #003399; color: #8aa4ff; font-weight: 700; }
+        .fcl-nav-link-active:hover { background: #003399; color: #ffffff; }
+        .fcl-nav-section {
+            font-family: "Inter", sans-serif; font-size: 12px; line-height: 16px;
+            font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+            color: #747684; padding: 12px 8px 4px;
+        }
+    </style>
+
+    <asp:ContentPlaceHolder ID="HeadContent" runat="server">
     </asp:ContentPlaceHolder>
 </head>
-<body class="bg-background text-on-background antialiased flex h-screen overflow-hidden">
-    <form id="form1" runat="server" class="flex w-full h-full">
+<body class="bg-background text-on-background font-body-md text-body-md antialiased flex h-screen overflow-hidden">
+    <form id="mainForm" runat="server" class="flex w-full h-full">
+        <asp:ScriptManager ID="ScriptManager1" runat="server" />
+
         <!-- SideNavBar -->
-        <nav class="bg-surface-container-lowest h-screen w-64 fixed left-0 top-0 border-r border-outline-variant shadow-sm flex flex-col p-stack-md space-y-2 hidden md:flex z-50">
+        <nav id="sideNav" class="bg-surface-container-lowest h-screen w-64 fixed left-0 top-0 border-r border-outline-variant shadow-sm flex-col p-stack-md hidden md:flex z-50 overflow-y-auto no-scrollbar no-print">
             <div class="mb-stack-md">
-                <span class="font-headline-md text-headline-md font-bold text-primary">LogistiCore</span>
-                <div class="mt-base flex items-center gap-base">
-                    <img alt="User Profile" class="w-8 h-8 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDAA86tJviKdr7fwBlSxpHc4c61qK0h1quaSdBIYpETi0wHbs_55-tiJmdNg7MEmn1YngYyUa1i50V_AWPwIgeQ5RgGlvZxCwW9N8qd_hKlX7ALSYUJNdv2wUfjNcjASBgpn4yKkm9LNk3467d0npVkrQ6SOHQ7xtIM61njQAVnNYRp7BDauxZse1NvQ6mjQ3b1pCdihVyZrqhoyfV-zFjmYxZ0PaJDh5toByYKaf4vbmIQbZXOpvfG"/>
-                    <div>
-                        <p class="font-label-md text-label-md text-on-surface" id="nav-user-name">
-                            <asp:Literal ID="litNavUserName" runat="server" Text="LogistiCore Admin"></asp:Literal>
-                        </p>
-                        <p class="font-label-sm text-label-sm text-on-surface-variant" id="nav-user-type">
-                            <asp:Literal ID="litNavUserType" runat="server" Text="Enterprise Account"></asp:Literal>
-                        </p>
+                <a href="<%= ResolveUrl("~/Default.aspx") %>" class="font-headline-md text-headline-md font-bold text-primary no-underline">LogistiCore</a>
+
+                <asp:Panel ID="pnlAuthActions" runat="server" CssClass="mt-base flex items-center gap-base">
+                    <span class="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center font-label-md text-label-md font-bold shrink-0">
+                        <asp:Literal ID="litAvatar" runat="server" /></span>
+                    <div class="min-w-0">
+                        <p class="font-label-md text-label-md text-on-surface truncate">
+                            <asp:Literal ID="litNavUserName" runat="server" /></p>
+                        <p class="font-label-sm text-label-sm text-on-surface-variant truncate">
+                            <asp:Literal ID="litNavUserType" runat="server" /></p>
                     </div>
-                </div>
+                </asp:Panel>
+
+                <asp:Panel ID="pnlAnonActions" runat="server" CssClass="mt-base">
+                    <p class="font-label-sm text-label-sm text-on-surface-variant">Courier &amp; supply chain services</p>
+                </asp:Panel>
             </div>
-            
+
             <div class="flex-1 space-y-1">
-                <a class="flex items-center gap-base p-2 bg-primary-container text-on-primary-container font-bold rounded-lg hover:bg-surface-variant transition-all focus:ring-2 focus:ring-primary-fixed duration-200" href="ClientDashboard.aspx">
-                    <span class="material-symbols-outlined">dashboard</span>
-                    <span class="font-label-md text-label-md">Dashboard</span>
-                </a>
-                <a class="flex items-center gap-base p-2 text-on-surface-variant hover:bg-surface-variant rounded-lg transition-all focus:ring-2 focus:ring-primary-fixed duration-200" href="#">
-                    <span class="material-symbols-outlined">local_shipping</span>
-                    <span class="font-label-md text-label-md">Shipments</span>
-                </a>
-                <a class="flex items-center gap-base p-2 text-on-surface-variant hover:bg-surface-variant rounded-lg transition-all focus:ring-2 focus:ring-primary-fixed duration-200" href="#">
-                    <span class="material-symbols-outlined">analytics</span>
-                    <span class="font-label-md text-label-md">Reports</span>
-                </a>
-
-                <%-- Employee Account Governance Option (Only visible to WarehouseAdmin) --%>
-                <% if (Session["UserType"] != null && Session["UserType"].ToString() == "WarehouseAdmin") { %>
-                <a class="flex items-center gap-base p-2 text-on-surface-variant hover:bg-surface-variant rounded-lg transition-all focus:ring-2 focus:ring-primary-fixed duration-200" href="WarehouseDashboard.aspx#admin-governance">
-                    <span class="material-symbols-outlined">admin_panel_settings</span>
-                    <span class="font-label-md text-label-md">Account Governance</span>
-                </a>
-                <% } %>
-
-                <a class="flex items-center gap-base p-2 text-on-surface-variant hover:bg-surface-variant rounded-lg transition-all focus:ring-2 focus:ring-primary-fixed duration-200" href="#">
-                    <span class="material-symbols-outlined">settings</span>
-                    <span class="font-label-md text-label-md">Settings</span>
-                </a>
+                <asp:Literal ID="litNav" runat="server" />
             </div>
 
             <div class="mt-auto space-y-1 pt-stack-md border-t border-outline-variant">
-                <asp:Button ID="btnCreateOrderNav" runat="server" Text="Create Order" CssClass="w-full bg-primary text-on-primary font-label-md text-label-md py-2 rounded-DEFAULT hover:bg-on-primary-fixed-variant transition-colors mb-stack-sm cursor-pointer" OnClick="btnCreateOrder_Click" />
-                <a class="flex items-center gap-base p-2 text-on-surface-variant hover:bg-surface-variant rounded-lg transition-all" href="#">
+                <asp:Button ID="btnCreateOrderNav" runat="server" Text="Create Order"
+                    CssClass="w-full bg-primary text-on-primary font-label-md text-label-md py-2 rounded-DEFAULT hover:bg-primary-container transition-colors mb-stack-sm cursor-pointer"
+                    OnClick="btnCreateOrder_Click" />
+
+                <asp:Literal ID="litBell" runat="server" />
+
+                <a class="fcl-nav-link" href="<%= ResolveUrl("~/Contact.aspx") %>">
                     <span class="material-symbols-outlined">help</span>
-                    <span class="font-label-md text-label-md">Help Center</span>
+                    <span>Help Centre</span>
                 </a>
-                <asp:LinkButton ID="btnLogout" runat="server" OnClick="btnLogout_Click" CssClass="flex items-center gap-base p-2 text-on-surface-variant hover:bg-surface-variant rounded-lg transition-all w-full text-left">
+
+                <asp:LinkButton ID="btnLogout" runat="server" OnClick="btnLogout_Click" CssClass="fcl-nav-link w-full text-left">
                     <span class="material-symbols-outlined">logout</span>
-                    <span class="font-label-md text-label-md">Logout</span>
+                    <span>Logout</span>
                 </asp:LinkButton>
+
+                <asp:Panel ID="pnlAnonLinks" runat="server" CssClass="space-y-1">
+                    <a class="fcl-nav-link" href="<%= ResolveUrl("~/Login.aspx") %>">
+                        <span class="material-symbols-outlined">lock_person</span>
+                        <span>Portal Login</span>
+                    </a>
+                    <a class="fcl-nav-link" href="<%= ResolveUrl("~/Register.aspx") %>">
+                        <span class="material-symbols-outlined">person_add</span>
+                        <span>Register</span>
+                    </a>
+                </asp:Panel>
             </div>
         </nav>
 
         <!-- Main Content Canvas -->
-        <main class="flex-1 ml-0 md:ml-64 overflow-y-auto p-margin-mobile md:p-margin-desktop relative h-full">
-            <asp:ContentPlaceHolder ID="MainContent" runat="server">
-            </asp:ContentPlaceHolder>
+        <main class="flex-1 ml-0 md:ml-64 overflow-y-auto relative h-full">
+            <!-- Mobile top bar: the sidebar is hidden below md, so this exposes the nav toggle. -->
+            <div class="md:hidden sticky top-0 z-40 flex items-center justify-between bg-surface-container-lowest border-b border-outline-variant px-margin-mobile py-base no-print">
+                <a href="<%= ResolveUrl("~/Default.aspx") %>" class="font-headline-md text-headline-md font-bold text-primary no-underline">LogistiCore</a>
+                <button type="button" onclick="toggleSideNav(); return false;" aria-label="Toggle navigation"
+                        class="text-on-surface-variant hover:text-primary p-2 rounded-lg">
+                    <span class="material-symbols-outlined ms-24">menu</span>
+                </button>
+            </div>
+
+            <div class="p-margin-mobile md:p-margin-desktop">
+                <asp:ContentPlaceHolder ID="MainContent" runat="server">
+                </asp:ContentPlaceHolder>
+            </div>
+
+            <asp:Literal ID="litFooter" runat="server" />
         </main>
+
+        <script>
+            function toggleSideNav() {
+                var n = document.getElementById('sideNav');
+                if (!n) return;
+                // The sidebar is `hidden md:flex`; on mobile we swap `hidden` for `flex`.
+                if (n.classList.contains('hidden')) { n.classList.remove('hidden'); n.classList.add('flex'); }
+                else { n.classList.add('hidden'); n.classList.remove('flex'); }
+            }
+        </script>
+
+        <asp:ContentPlaceHolder ID="ScriptContent" runat="server">
+        </asp:ContentPlaceHolder>
     </form>
 </body>
 </html>

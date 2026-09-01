@@ -1,12 +1,109 @@
 using System;
-using System.Web.UI;
+using System.Web.UI.WebControls;
+using ForteLogisticsApp.Data;
+using ForteLogisticsApp.Security;
+using ForteLogisticsApp.Services;
 
-namespace LogistiCoreV5
+namespace ForteLogisticsApp.CustomerPortal
 {
-    public partial class BookShipment : Page
+    /// <summary>
+    /// Four-step booking wizard: parcel size, addresses, recipient, waybill.
+    ///
+    /// Pricing is not a fixed per-size table. The size band selected in step 1 sets the
+    /// billed weight, and CourierService.CalculateQuote prices that weight over the chosen
+    /// route - the same calculation the public quote tool on the home page uses, so a
+    /// customer is never quoted two different prices for the same shipment.
+    ///
+    /// Confirming does not take a card payment: it books the shipment and raises an unpaid
+    /// invoice in dbo.[Payment], which the customer settles under My Invoices.
+    /// </summary>
+    public partial class BookShipment : SecurePage
     {
+        protected MultiView mvBookShipment;
+        protected View vwParcelDetails;
+        protected View vwAddresses;
+        protected View vwPayment;
+        protected View vwConfirmation;
+
+        protected Panel pnlStep1Indicator;
+        protected Panel pnlStep2Indicator;
+        protected Panel pnlStep3Indicator;
+        protected Panel pnlStep4Indicator;
+
+        protected HiddenField hfSelectedSize;
+
+        protected TextBox txtPickupStreet;
+        protected DropDownList ddlPickupCity;
+        protected TextBox txtPickupPostal;
+        protected TextBox txtDeliveryStreet;
+        protected DropDownList ddlDeliveryCity;
+        protected TextBox txtDeliveryPostal;
+
+        protected TextBox txtReceiver;
+        protected TextBox txtReceiverPhone;
+        protected TextBox txtDescription;
+        protected Label lblStatus;
+
+        protected Label lblSummarySize;
+        protected Label lblSummaryPickup;
+        protected Label lblSummaryDelivery;
+        protected Label lblSummaryTotal;
+
+        protected Label lblWaybillTracking;
+        protected Label lblWaybillDate;
+        protected Label lblWaybillSize;
+        protected Label lblWaybillAmount;
+        protected Label lblWaybillSenderName;
+        protected Label lblWaybillReceiverName;
+        protected Label lblWaybillPickupStreet;
+        protected Label lblWaybillPickupCity;
+        protected Label lblWaybillPickupPostal;
+        protected Label lblWaybillDeliveryStreet;
+        protected Label lblWaybillDeliveryCity;
+        protected Label lblWaybillDeliveryPostal;
+
+        /// <summary>
+        /// Billed weight for each size band, taken from the maximum weight advertised on
+        /// the size cards in step 1.
+        /// </summary>
+        private decimal BilledWeight
+        {
+            get
+            {
+                switch (hfSelectedSize.Value)
+                {
+                    case "Medium": return 5m;
+                    case "Large": return 15m;
+                    case "XLarge": return 30m;
+                    default: return 2m;
+                }
+            }
+        }
+
+        private decimal Quote
+        {
+            get
+            {
+                return CourierService.CalculateQuote(
+                    ddlPickupCity.SelectedValue, ddlDeliveryCity.SelectedValue, BilledWeight);
+            }
+        }
+
         protected void Page_Load(object sender, EventArgs e)
         {
+            RequireRole("Customer");
+
+            if (!IsPostBack)
+            {
+                SortingService.BindCities(ddlPickupCity);
+                SortingService.BindCities(ddlDeliveryCity, "Cape Town");
+
+                // Pre-fill collection from the address already on the account.
+                txtPickupStreet.Text = Db.ToStr(Db.Scalar(
+                    "SELECT Address FROM dbo.[User] WHERE UserID = @u", "@u", UserId));
+
+                UpdateWizardIndicators(1);
+            }
         }
 
         protected void btnNextAddress_Click(object sender, EventArgs e)
@@ -23,27 +120,10 @@ namespace LogistiCoreV5
 
         protected void btnNextPayment_Click(object sender, EventArgs e)
         {
-            // Populate Step 3 Order Summary
-            string size = hfSelectedSize.Value;
-            lblSummarySize.Text = size;
-            lblSummaryPickup.Text = string.IsNullOrEmpty(txtPickupCity.Text) ? "KuGompo" : txtPickupCity.Text;
-            lblSummaryDelivery.Text = string.IsNullOrEmpty(txtDeliveryCity.Text) ? "KuGompo" : txtDeliveryCity.Text;
-
-            switch (size)
-            {
-                case "Medium":
-                    lblSummaryTotal.Text = "R 150.00";
-                    break;
-                case "Large":
-                    lblSummaryTotal.Text = "R 250.00";
-                    break;
-                case "XLarge":
-                    lblSummaryTotal.Text = "R 380.00";
-                    break;
-                default:
-                    lblSummaryTotal.Text = "R 100.00";
-                    break;
-            }
+            lblSummarySize.Text = hfSelectedSize.Value + " (up to " + BilledWeight.ToString("0.##") + " kg)";
+            lblSummaryPickup.Text = ddlPickupCity.SelectedValue;
+            lblSummaryDelivery.Text = ddlDeliveryCity.SelectedValue;
+            lblSummaryTotal.Text = "R " + Quote.ToString("N2");
 
             mvBookShipment.SetActiveView(vwPayment);
             UpdateWizardIndicators(3);
@@ -57,42 +137,106 @@ namespace LogistiCoreV5
 
         protected void btnConfirmPayment_Click(object sender, EventArgs e)
         {
-            // 1. Generate unique tracking number
-            Random rnd = new Random();
-            string trackingNo = "LC-" + rnd.Next(10000000, 99999999).ToString() + "ZA";
-            lblWaybillTracking.Text = trackingNo;
+            if (!Page.IsValid) return;
 
-            // 2. Set Barcode image URL (using Tec-IT Barcode API)
-            imgBarcode.ImageUrl = $"https://barcode.tec-it.com/barcode.ashx?data={trackingNo}&code=Code128&translate-esc=false";
+            if (txtPickupStreet.Text.Trim().Length == 0 ||
+                txtDeliveryStreet.Text.Trim().Length == 0 ||
+                txtReceiver.Text.Trim().Length == 0)
+            {
+                lblStatus.CssClass = UiHelper.AlertClass("error") + " mt-4";
+                lblStatus.Text = "Please complete the collection, delivery and recipient details.";
+                return;
+            }
 
-            // 3. Populate Waybill dates & details
+            string trackingNumber = CourierService.GenerateTrackingNumber();
+            decimal cost = Quote;
+
+            string pickupAddress = Join(txtPickupStreet.Text, ddlPickupCity.SelectedValue, txtPickupPostal.Text);
+            string deliveryAddress = Join(txtDeliveryStreet.Text, ddlDeliveryCity.SelectedValue, txtDeliveryPostal.Text);
+
+            int shipmentId = Db.Insert(
+                @"INSERT INTO dbo.[Shipment]
+                    (TrackingNumber, Barcode, SenderID, ReceiverName, ReceiverPhone,
+                     PickupAddress, DeliveryAddress, OriginCity, DestCity, ParcelWeight,
+                     ParcelDescription, Cost, DeliveryStatus, WarehouseStatus, LastStatusChange)
+                  VALUES (@t, @t, @s, @rn, @rp, @pu, @da, @o, @d, @w, @desc, @c,
+                          'Registered', 'Pending', GETDATE())",
+                "@t", trackingNumber,
+                "@s", UserId,
+                "@rn", txtReceiver.Text.Trim(),
+                "@rp", txtReceiverPhone.Text.Trim(),
+                "@pu", pickupAddress,
+                "@da", deliveryAddress,
+                "@o", ddlPickupCity.SelectedValue,
+                "@d", ddlDeliveryCity.SelectedValue,
+                "@w", BilledWeight,
+                "@desc", txtDescription.Text.Trim(),
+                "@c", cost);
+
+            Db.NonQuery(
+                @"INSERT INTO dbo.[TrackingHistory] (ShipmentID, Location, Status, Remarks)
+                  VALUES (@s, @loc, 'Registered', 'Collection booked online by customer')",
+                "@s", shipmentId, "@loc", ddlPickupCity.SelectedValue + " (Booking)");
+
+            string invoiceNumber = CourierService.GenerateInvoiceNumber();
+            Db.NonQuery(
+                @"INSERT INTO dbo.[Payment] (ClientID, ShipmentID, InvoiceNumber, Amount, PaymentStatus)
+                  VALUES (@c, @s, @inv, @a, 'Unpaid')",
+                "@c", UserId, "@s", shipmentId, "@inv", invoiceNumber, "@a", cost);
+
+            NotificationService.Send(UserId, shipmentId,
+                "Your collection has been booked. Waybill " + trackingNumber + ". Invoice " +
+                invoiceNumber + " for R " + cost.ToString("F2") + " is ready to pay in My Invoices.",
+                "Registration");
+
+            lblStatus.Text = string.Empty;
+            lblStatus.CssClass = string.Empty;
+
+            lblWaybillTracking.Text = trackingNumber;
             lblWaybillDate.Text = DateTime.Now.ToString("dd MMM yyyy, HH:mm");
             lblWaybillSize.Text = hfSelectedSize.Value;
-            lblWaybillAmount.Text = lblSummaryTotal.Text;
+            lblWaybillAmount.Text = "R " + cost.ToString("N2");
+            lblWaybillSenderName.Text = FullName;
+            lblWaybillReceiverName.Text = txtReceiver.Text.Trim();
 
-            // 4. Populate Addresses from Step 2 Inputs
-            lblWaybillPickupStreet.Text = txtPickupStreet.Text;
-            lblWaybillPickupCity.Text = txtPickupCity.Text;
-            lblWaybillPickupPostal.Text = txtPickupPostal.Text;
+            lblWaybillPickupStreet.Text = txtPickupStreet.Text.Trim();
+            lblWaybillPickupCity.Text = ddlPickupCity.SelectedValue;
+            lblWaybillPickupPostal.Text = txtPickupPostal.Text.Trim();
 
-            lblWaybillDeliveryStreet.Text = txtDeliveryStreet.Text;
-            lblWaybillDeliveryCity.Text = txtDeliveryCity.Text;
-            lblWaybillDeliveryPostal.Text = txtDeliveryPostal.Text;
+            lblWaybillDeliveryStreet.Text = txtDeliveryStreet.Text.Trim();
+            lblWaybillDeliveryCity.Text = ddlDeliveryCity.SelectedValue;
+            lblWaybillDeliveryPostal.Text = txtDeliveryPostal.Text.Trim();
 
-            // 5. Move to Confirmation View
+            // JsBarcode (loaded by the master) renders the waybill locally, so the number
+            // is never sent to a third-party barcode service.
+            ClientScript.RegisterStartupScript(GetType(), "waybillBarcode",
+                "if (window.JsBarcode) { JsBarcode('#waybillBarcode', '" +
+                UiHelper.JsEnc(trackingNumber) + "', { format: 'CODE128', displayValue: false, height: 60 }); }",
+                true);
+
             mvBookShipment.SetActiveView(vwConfirmation);
             UpdateWizardIndicators(4);
         }
 
+        private static string Join(string street, string city, string postal)
+        {
+            string result = street.Trim();
+            if (city.Length > 0) result += ", " + city;
+            if (postal.Trim().Length > 0) result += ", " + postal.Trim();
+            return result;
+        }
+
         private void UpdateWizardIndicators(int activeStep)
         {
-            string activeClass = "w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center font-bold text-sm";
-            string inactiveClass = "w-8 h-8 rounded-full bg-surface-container-highest text-on-surface-variant flex items-center justify-center font-bold text-sm";
+            const string active =
+                "w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center font-bold text-label-md";
+            const string inactive =
+                "w-8 h-8 rounded-full bg-surface-container-highest text-on-surface-variant flex items-center justify-center font-bold text-label-md";
 
-            pnlStep1Indicator.CssClass = (activeStep == 1) ? activeClass : inactiveClass;
-            pnlStep2Indicator.CssClass = (activeStep == 2) ? activeClass : inactiveClass;
-            pnlStep3Indicator.CssClass = (activeStep == 3) ? activeClass : inactiveClass;
-            pnlStep4Indicator.CssClass = (activeStep == 4) ? activeClass : inactiveClass;
+            pnlStep1Indicator.CssClass = activeStep == 1 ? active : inactive;
+            pnlStep2Indicator.CssClass = activeStep == 2 ? active : inactive;
+            pnlStep3Indicator.CssClass = activeStep == 3 ? active : inactive;
+            pnlStep4Indicator.CssClass = activeStep == 4 ? active : inactive;
         }
     }
 }

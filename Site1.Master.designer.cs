@@ -23,20 +23,26 @@ namespace ForteLogisticsApp
         /// <summary>ScriptManager1 control.</summary>
         protected global::System.Web.UI.ScriptManager ScriptManager1;
 
-        /// <summary>litUserBar control.</summary>
-        protected global::System.Web.UI.WebControls.Literal litUserBar;
+        /// <summary>pnlAuthActions control.</summary>
+        protected global::System.Web.UI.WebControls.Panel pnlAuthActions;
 
-        /// <summary>litNav control.</summary>
-        protected global::System.Web.UI.WebControls.Literal litNav;
+        /// <summary>litAvatar control.</summary>
+        protected global::System.Web.UI.WebControls.Literal litAvatar;
+
+        /// <summary>litNavUserName control.</summary>
+        protected global::System.Web.UI.WebControls.Literal litNavUserName;
+
+        /// <summary>litNavUserType control.</summary>
+        protected global::System.Web.UI.WebControls.Literal litNavUserType;
 
         /// <summary>pnlAnonActions control.</summary>
         protected global::System.Web.UI.WebControls.Panel pnlAnonActions;
 
-        /// <summary>pnlAuthActions control.</summary>
-        protected global::System.Web.UI.WebControls.Panel pnlAuthActions;
+        /// <summary>litNav control.</summary>
+        protected global::System.Web.UI.WebControls.Literal litNav;
 
-        /// <summary>litGreeting control.</summary>
-        protected global::System.Web.UI.WebControls.Literal litGreeting;
+        /// <summary>btnCreateOrderNav control.</summary>
+        protected global::System.Web.UI.WebControls.Button btnCreateOrderNav;
 
         /// <summary>litBell control.</summary>
         protected global::System.Web.UI.WebControls.Literal litBell;
@@ -44,29 +50,14 @@ namespace ForteLogisticsApp
         /// <summary>btnLogout control.</summary>
         protected global::System.Web.UI.WebControls.LinkButton btnLogout;
 
-        /// <summary>litMobileNav control.</summary>
-        protected global::System.Web.UI.WebControls.Literal litMobileNav;
+        /// <summary>pnlAnonLinks control.</summary>
+        protected global::System.Web.UI.WebControls.Panel pnlAnonLinks;
 
         /// <summary>MainContent control.</summary>
         protected global::System.Web.UI.WebControls.ContentPlaceHolder MainContent;
 
         /// <summary>litFooter control.</summary>
         protected global::System.Web.UI.WebControls.Literal litFooter;
-
-        /// <summary>upLogin control.</summary>
-        protected global::System.Web.UI.UpdatePanel upLogin;
-
-        /// <summary>txtEmail control.</summary>
-        protected global::System.Web.UI.WebControls.TextBox txtEmail;
-
-        /// <summary>txtPassword control.</summary>
-        protected global::System.Web.UI.WebControls.TextBox txtPassword;
-
-        /// <summary>btnLogin control.</summary>
-        protected global::System.Web.UI.WebControls.Button btnLogin;
-
-        /// <summary>lblLoginStatus control.</summary>
-        protected global::System.Web.UI.WebControls.Label lblLoginStatus;
 
         /// <summary>ScriptContent control.</summary>
         protected global::System.Web.UI.WebControls.ContentPlaceHolder ScriptContent;

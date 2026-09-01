@@ -1,263 +1,200 @@
 using System;
-using System.Configuration;
 using System.Data;
-using System.Data.SqlClient;
-using System.Web.UI;
 using System.Web.UI.WebControls;
+using ForteLogisticsApp.Data;
+using ForteLogisticsApp.Security;
+using ForteLogisticsApp.Services;
 
-namespace LogistiCoreV5
+namespace ForteLogisticsApp.Ops
 {
-    public partial class WarehouseDashboard : System.Web.UI.Page
+    /// <summary>
+    /// Warehouse sorting desk.
+    ///
+    /// An operator scans a waybill, confirms or overrides the sort lane, sets the warehouse
+    /// status and flags any exception. The lane is derived from the destination city by
+    /// SortingService so it never has to be picked by hand, and any exception is escalated
+    /// by AutomationService rather than being left for someone to notice.
+    /// </summary>
+    public partial class Warehouse : SecurePage
     {
-        private readonly string connString = ConfigurationManager.ConnectionStrings["LogistiCoreDB"].ConnectionString;
+        protected TextBox txtScan;
+        protected Button btnScan;
+        protected Button btnSave;
+        protected Label lblScanMsg;
+        protected Label lblSaveMsg;
+        protected Panel pnlEdit;
+        protected Panel pnlEmpty;
+        protected Literal litParcel;
+        protected Literal litRoute;
+        protected Literal litSortReason;
+        protected Literal litQueueCount;
+        protected DropDownList ddlSort;
+        protected DropDownList ddlWarehouse;
+        protected DropDownList ddlException;
+        protected DropDownList ddlLane;
+        protected HiddenField hfShipmentId;
+        protected GridView gvSortingQueue;
+        protected TextBox txtSearch;
 
-        protected void Page_Load(object sender, EventArgs args)
+        protected void Page_Load(object sender, EventArgs e)
         {
-            // 1. Session Authorization Check
-            if (Session["UserEmail"] == null)
-            {
-                Response.Redirect("Login.aspx");
-                return;
-            }
+            RequireRole("Admin", "Staff");
 
             if (!IsPostBack)
             {
-                // 2. Load existing parcel queue
-                BindQueueGrid();
-
-                // 3. Enable Governance Panel ONLY for WarehouseAdmin
-                string userType = Session["UserType"] != null ? Session["UserType"].ToString() : string.Empty;
-                if (string.Equals(userType, "WarehouseAdmin", StringComparison.OrdinalIgnoreCase))
-                {
-                    pnlAdminGovernance.Visible = true;
-                    BindUserManagementGrid();
-                }
+                BindLaneFilter();
+                LoadQueue();
             }
         }
 
-        #region User Governance Methods (WarehouseAdmin Only)
-
-        private void BindUserManagementGrid()
+        private void BindLaneFilter()
         {
-            string query = @"
-                SELECT u.UserId, u.FirstName, u.LastName, u.Email, u.AccountStatus, r.RoleName 
-                FROM Users u
-                INNER JOIN Roles r ON u.RoleId = r.RoleId
-                ORDER BY CASE WHEN u.AccountStatus = 'Pending' THEN 1 ELSE 2 END, u.UserId DESC";
-
-            try
+            ddlLane.Items.Clear();
+            ddlLane.Items.Add(new ListItem("All sort lanes", string.Empty));
+            foreach (string category in SortingService.Categories)
             {
-                using (SqlConnection conn = new SqlConnection(connString))
-                {
-                    using (SqlCommand cmd = new SqlCommand(query, conn))
-                    {
-                        using (SqlDataAdapter da = new SqlDataAdapter(cmd))
-                        {
-                            DataTable dt = new DataTable();
-                            da.Fill(dt);
-                            gvUserGovernance.DataSource = dt;
-                            gvUserGovernance.DataBind();
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                ShowGovernanceAlert("Error loading user governance data: " + ex.Message, "danger");
+                ddlLane.Items.Add(new ListItem(category, category));
             }
         }
 
-        protected void gvUserGovernance_RowCommand(object sender, GridViewCommandEventArgs e)
+        private void LoadQueue()
         {
-            if (e.CommandArgument == null) return;
+            string search = txtSearch.Text.Trim();
+            string lane = ddlLane.SelectedValue;
 
-            if (!int.TryParse(e.CommandArgument.ToString(), out int userId)) return;
+            // Both filters are optional; a NULL/empty parameter disables its own clause so
+            // the whole thing stays one parameterised statement.
+            DataTable queue = Db.Query(
+                @"SELECT ShipmentID, TrackingNumber, OriginCity, DestCity,
+                         SortCategory, WarehouseStatus, ExceptionType
+                  FROM dbo.[Shipment]
+                  WHERE WarehouseStatus IN ('Pending','Received','Sorted')
+                    AND (@q = '' OR TrackingNumber LIKE '%' + @q + '%' OR DestCity LIKE '%' + @q + '%')
+                    AND (@lane = '' OR SortCategory = @lane)
+                  ORDER BY ShipmentDate DESC",
+                "@q", search, "@lane", lane);
 
-            string newStatus = string.Empty;
-
-            switch (e.CommandName)
-            {
-                case "ApproveUser":
-                    newStatus = "Approved";
-                    ShowGovernanceAlert($"Employee (ID: {userId}) approved successfully.", "success");
-                    break;
-
-                case "ReactivateUser":
-                    newStatus = "Approved";
-                    ShowGovernanceAlert($"Employee account (ID: {userId}) reactivated.", "success");
-                    break;
-
-                case "DisapproveUser":
-                    newStatus = "Disapproved";
-                    ShowGovernanceAlert($"Employee registration (ID: {userId}) declined.", "warning");
-                    break;
-
-                case "SuspendUser":
-                    newStatus = "Suspended";
-                    ShowGovernanceAlert($"Employee access (ID: {userId}) suspended.", "danger");
-                    break;
-
-                case "RemoveUser":
-                    DeleteUserAccount(userId);
-                    return;
-            }
-
-            if (!string.IsNullOrEmpty(newStatus))
-            {
-                UpdateUserStatus(userId, newStatus);
-                BindUserManagementGrid();
-            }
-        }
-
-        private void UpdateUserStatus(int userId, string status)
-        {
-            string query = "UPDATE Users SET AccountStatus = @Status WHERE UserId = @UserId";
-
-            try
-            {
-                using (SqlConnection conn = new SqlConnection(connString))
-                {
-                    using (SqlCommand cmd = new SqlCommand(query, conn))
-                    {
-                        cmd.Parameters.AddWithValue("@Status", status);
-                        cmd.Parameters.AddWithValue("@UserId", userId);
-                        conn.Open();
-                        cmd.ExecuteNonQuery();
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                ShowGovernanceAlert("Database error updating user status: " + ex.Message, "danger");
-            }
-        }
-
-        private void DeleteUserAccount(int userId)
-        {
-            string query = "DELETE FROM Users WHERE UserId = @UserId";
-
-            try
-            {
-                using (SqlConnection conn = new SqlConnection(connString))
-                {
-                    using (SqlCommand cmd = new SqlCommand(query, conn))
-                    {
-                        cmd.Parameters.AddWithValue("@UserId", userId);
-                        conn.Open();
-                        cmd.ExecuteNonQuery();
-                    }
-                }
-                ShowGovernanceAlert($"Employee account (ID: {userId}) permanently removed.", "info");
-                BindUserManagementGrid();
-            }
-            catch (SqlException ex) when (ex.Number == 547) // Foreign key constraint conflict
-            {
-                ShowGovernanceAlert($"Cannot remove employee (ID: {userId}) because they have linked activity records in the database. Consider suspending access instead.", "warning");
-            }
-            catch (Exception ex)
-            {
-                ShowGovernanceAlert("Error removing user account: " + ex.Message, "danger");
-            }
-        }
-
-        private void ShowGovernanceAlert(string message, string alertType)
-        {
-            pnlGovernanceAlert.Visible = true;
-            litGovernanceAlert.Text = message;
-
-            switch (alertType.ToLower())
-            {
-                case "success":
-                    pnlGovernanceAlert.CssClass = "p-3.5 mb-4 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-800 border border-emerald-200 flex justify-between items-center";
-                    break;
-                case "warning":
-                    pnlGovernanceAlert.CssClass = "p-3.5 mb-4 rounded-lg text-xs font-medium bg-amber-50 text-amber-800 border border-amber-200 flex justify-between items-center";
-                    break;
-                case "danger":
-                    pnlGovernanceAlert.CssClass = "p-3.5 mb-4 rounded-lg text-xs font-medium bg-rose-50 text-rose-800 border border-rose-200 flex justify-between items-center";
-                    break;
-                default:
-                    pnlGovernanceAlert.CssClass = "p-3.5 mb-4 rounded-lg text-xs font-medium bg-indigo-50 text-indigo-800 border border-indigo-200 flex justify-between items-center";
-                    break;
-            }
-        }
-
-        public string GetStatusBadgeCss(string status)
-        {
-            switch (status)
-            {
-                case "Approved":
-                    return "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800";
-                case "Pending":
-                    return "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800";
-                case "Suspended":
-                case "Disapproved":
-                    return "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-100 text-rose-800";
-                default:
-                    return "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800";
-            }
-        }
-
-        #endregion
-
-        #region Parcel Sorting Queue Methods
-
-        private void BindQueueGrid()
-        {
-            DataTable dt = new DataTable();
-            dt.Columns.Add("TrackingID");
-            dt.Columns.Add("Destination");
-            dt.Columns.Add("Priority");
-            dt.Columns.Add("Status");
-
-            dt.Rows.Add("LC-8472-A", "Sector 4, North District", "High", "Pending Scan");
-            dt.Rows.Add("LC-9931-B", "Sector 2, East District", "Standard", "Sorted");
-            dt.Rows.Add("LC-1045-C", "Sector 7, West Hub", "Standard", "Sorted");
-
-            gvSortingQueue.DataSource = dt;
+            gvSortingQueue.DataSource = queue;
             gvSortingQueue.DataBind();
+
+            pnlEmpty.Visible = queue.Rows.Count == 0;
+            gvSortingQueue.Visible = queue.Rows.Count > 0;
+            litQueueCount.Text = queue.Rows.Count.ToString();
         }
 
         protected void txtSearch_TextChanged(object sender, EventArgs e)
         {
-            // Search filtering logic
+            LoadQueue();
         }
 
-        protected void ddlPriority_SelectedIndexChanged(object sender, EventArgs e)
+        protected void ddlLane_SelectedIndexChanged(object sender, EventArgs e)
         {
-            // Priority filtering logic
+            LoadQueue();
         }
 
         protected void gvSortingQueue_RowCommand(object sender, GridViewCommandEventArgs e)
         {
-            if (e.CommandArgument == null) return;
-            string trackingId = e.CommandArgument.ToString();
+            if (e.CommandName != "LoadParcel") return;
 
-            if (e.CommandName == "ScanIn")
+            txtScan.Text = Convert.ToString(e.CommandArgument);
+            LoadParcel(txtScan.Text.Trim());
+        }
+
+        protected void btnScan_Click(object sender, EventArgs e)
+        {
+            LoadParcel(txtScan.Text.Trim());
+        }
+
+        private void LoadParcel(string trackingNumber)
+        {
+            DataTable dt = Db.Query(
+                @"SELECT ShipmentID, TrackingNumber, OriginCity, DestCity, ParcelWeight,
+                         SortCategory, WarehouseStatus, ExceptionType
+                  FROM dbo.[Shipment] WHERE TrackingNumber = @t", "@t", trackingNumber);
+
+            if (dt.Rows.Count == 0)
             {
-                // Scan logic
+                pnlEdit.Visible = false;
+                lblScanMsg.CssClass = UiHelper.AlertClass("error") + " mt-2";
+                lblScanMsg.Text = "No parcel found for that waybill.";
+                return;
             }
-            else if (e.CommandName == "AssignDriver")
-            {
-                // Driver assignment logic
-            }
+
+            DataRow row = dt.Rows[0];
+            hfShipmentId.Value = Db.ToStr(row["ShipmentID"]);
+            litParcel.Text = Server.HtmlEncode(Db.ToStr(row["TrackingNumber"]));
+
+            string destCity = Db.ToStr(row["DestCity"]);
+            litRoute.Text = Server.HtmlEncode(
+                Db.ToStr(row["OriginCity"]) + " → " + destCity + " · " +
+                Db.ToDecimal(row["ParcelWeight"]).ToString("0.##") + " kg");
+
+            string currentLane = Db.ToStr(row["SortCategory"]);
+            string suggestedLane = SortingService.CategoryFor(destCity);
+            SortingService.BindCategories(ddlSort, currentLane.Length > 0 ? currentLane : suggestedLane);
+
+            litSortReason.Text = currentLane.Length > 0
+                ? "Currently sorted to <strong>" + Server.HtmlEncode(currentLane) + "</strong>."
+                : "Auto-sorted to <strong>" + Server.HtmlEncode(suggestedLane) +
+                  "</strong> from destination " + Server.HtmlEncode(destCity) + ". Override only if needed.";
+
+            // A parcel that is still Pending or Received is being sorted right now, so
+            // default the status to where this action is about to take it.
+            string warehouseStatus = Db.ToStr(row["WarehouseStatus"]);
+            SortingService.SelectValue(ddlWarehouse,
+                (warehouseStatus == "Pending" || warehouseStatus == "Received") ? "Sorted" : warehouseStatus);
+            SortingService.SelectValue(ddlException, Db.ToStr(row["ExceptionType"]));
+
+            pnlEdit.Visible = true;
+            lblScanMsg.Text = string.Empty;
+            lblScanMsg.CssClass = string.Empty;
         }
 
-        protected void btnGenerateReport_Click(object sender, EventArgs e)
+        protected void btnSave_Click(object sender, EventArgs e)
         {
-            // Report generation logic
-        }
+            int shipmentId;
+            if (!int.TryParse(hfShipmentId.Value, out shipmentId)) return;
 
-        protected void btnPrevPage_Click(object sender, EventArgs e)
-        {
-            // Pagination previous
-        }
+            string warehouseStatus = ddlWarehouse.SelectedValue;
+            string exceptionType = ddlException.SelectedValue;
 
-        protected void btnNextPage_Click(object sender, EventArgs e)
-        {
-            // Pagination next
-        }
+            // Warehouse status drives the customer-facing delivery status, except once the
+            // parcel has reached a terminal state - that must not be walked backwards.
+            string deliveryStatus =
+                warehouseStatus == "Sorted" ? "Sorted" :
+                warehouseStatus == "Dispatched" ? "InTransit" : "Registered";
 
-        #endregion
+            Db.NonQuery(
+                @"UPDATE dbo.[Shipment]
+                  SET SortCategory = @sc, WarehouseStatus = @ws, ExceptionType = @ex,
+                      LastStatusChange = GETDATE(),
+                      DeliveryStatus = CASE WHEN DeliveryStatus IN ('Delivered','Failed')
+                                            THEN DeliveryStatus ELSE @ds END
+                  WHERE ShipmentID = @id",
+                "@sc", ddlSort.SelectedValue,
+                "@ws", warehouseStatus,
+                "@ex", exceptionType,
+                "@ds", deliveryStatus,
+                "@id", shipmentId);
+
+            Db.NonQuery(
+                @"INSERT INTO dbo.[TrackingHistory] (ShipmentID, AdminID, Location, Status, Remarks)
+                  VALUES (@s, @a, 'Central Warehouse', @st, @rm)",
+                "@s", shipmentId,
+                "@a", UserId,
+                "@st", warehouseStatus,
+                "@rm", exceptionType == "None"
+                    ? "Sorted to " + ddlSort.SelectedValue
+                    : "Flagged as " + exceptionType);
+
+            AutomationService.EscalateException(shipmentId, exceptionType, UserId);
+
+            lblSaveMsg.CssClass = UiHelper.AlertClass("success") + " mt-1";
+            lblSaveMsg.Text = exceptionType == "None"
+                ? "Parcel updated."
+                : "Parcel updated. " + exceptionType + " exception escalated to Dispatch and Management.";
+
+            LoadQueue();
+        }
     }
 }

@@ -13,13 +13,6 @@ namespace ForteLogisticsApp
             DbInitializer.EnsureCreated();
         }
 
- void Session_Start(object sender, EventArgs e)
- {
-     // Temporary test session for local development
-     Session["IsLoggedIn"] = true;
-     Session["UserType"] = "Business"; // Or "Individual"
-     Session["UserEmail"] = "admin@logisticore.com";
- }
         /// <summary>
         /// Captures the real exception server-side and hands the user only a reference code.
         /// SQL exception text names tables and columns, so it must never reach the browser.

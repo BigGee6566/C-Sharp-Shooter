@@ -1,134 +1,112 @@
 using System;
-using System.Configuration;
-using System.Data;
-using System.Data.SqlClient;
-using System.Security.Cryptography;
-using System.Text;
-using System.Web.UI;
+using System.Web.UI.WebControls;
+using ForteLogisticsApp.Data;
+using ForteLogisticsApp.Security;
+using ForteLogisticsApp.Services;
 
-namespace LogistiCoreV5
+namespace ForteLogisticsApp
 {
-    public partial class Register : Page
+    /// <summary>
+    /// Public self-registration.
+    ///
+    /// This page only ever creates a Customer. Staff and Admin accounts are provisioned in
+    /// Admin -> Users, which also creates the matching dbo.[Admin] / dbo.[Driver] records.
+    /// Letting a visitor pick their own role here would be straightforward privilege
+    /// escalation, so the account type chosen on the form is stored as Client.ClientType
+    /// (Individual or Business) and the role is hardcoded.
+    /// </summary>
+    public partial class RegisterPage : BasePage
     {
+        protected HiddenField hfRole;
+        protected Panel pnlStaffNotice;
+        protected Panel pnlForm;
+        protected TextBox txtFullName;
+        protected TextBox txtEmail;
+        protected TextBox txtPhone;
+        protected TextBox txtAddress;
+        protected TextBox txtPassword;
+        protected TextBox txtConfirm;
+        protected CheckBox chkTerms;
+        protected Label lblStatus;
+        protected Button btnRegister;
+
         protected void Page_Load(object sender, EventArgs e)
         {
-            lblError.Visible = false;
+            if (!IsPostBack && Session["UserID"] != null)
+            {
+                Response.Redirect(ResolveUrl(AuthService.DashboardUrl(Session["Role"] as string)));
+            }
         }
 
         protected void btnRegister_Click(object sender, EventArgs e)
         {
-            // 1. Validate Terms
+            if (!Page.IsValid) return;
+
+            string fullName = txtFullName.Text.Trim();
+            string email = txtEmail.Text.Trim();
+            string password = txtPassword.Text;
+
+            // The client-side tabs hide the form for Staff, but never trust that alone.
+            if (string.Equals(hfRole.Value, "Staff", StringComparison.OrdinalIgnoreCase))
+            {
+                SetStatus("error", "Staff accounts are created by an administrator, not through self-registration.");
+                return;
+            }
+
+            if (fullName.Length == 0 || email.Length == 0 || password.Length == 0)
+            {
+                SetStatus("error", "Please complete all required fields (marked *).");
+                return;
+            }
+            if (password.Length < 6)
+            {
+                SetStatus("error", "Password must be at least 6 characters long.");
+                return;
+            }
+            if (password != txtConfirm.Text)
+            {
+                SetStatus("error", "The passwords you entered do not match.");
+                return;
+            }
             if (!chkTerms.Checked)
             {
-                ShowError("You must agree to the Terms of Service and Privacy Policy to register.");
+                SetStatus("error", "Please accept the Terms of Service to continue.");
                 return;
             }
 
-            // 2. Map Form Inputs
-            string selectedRoleKey = hfRole.Value?.ToLower() ?? "individual";
-
-            // Map UI roles to database Roles table values
-            string dbRoleName = (selectedRoleKey == "staff") ? "Warehouse Worker" : "Customer";
-
-            // Determine email based on selected tab
-            string email = (selectedRoleKey == "staff" && !string.IsNullOrWhiteSpace(txtWorkEmail.Text))
-                ? txtWorkEmail.Text.Trim()
-                : txtEmail.Text.Trim();
-
-            string rawPassword = txtPassword.Text.Trim();
-            string phone = txtPhone.Text.Trim();
-            string rawFullName = txtFullName.Text.Trim();
-
-            if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(rawPassword) || string.IsNullOrWhiteSpace(rawFullName))
+            if (Db.ToInt(Db.Scalar("SELECT COUNT(*) FROM dbo.[User] WHERE Email = @e", "@e", email)) > 0)
             {
-                ShowError("Please fill in all required fields (Full Name, Email, and Password).");
+                SetStatus("error", "An account with that email already exists. Please sign in instead.");
                 return;
             }
 
-            // 3. Parse First and Last Name
-            string firstName = rawFullName;
-            string lastName = "";
-            int spaceIndex = rawFullName.IndexOf(' ');
+            int userId = Db.Insert(
+                @"INSERT INTO dbo.[User] (FullName, Email, Password, Role, PhoneNumber, Address)
+                  VALUES (@n, @e, @p, 'Customer', @ph, @a)",
+                "@n", fullName,
+                "@e", email,
+                "@p", PasswordHelper.Hash(password),
+                "@ph", txtPhone.Text.Trim(),
+                "@a", txtAddress.Text.Trim());
 
-            if (spaceIndex > 0)
-            {
-                firstName = rawFullName.Substring(0, spaceIndex).Trim();
-                lastName = rawFullName.Substring(spaceIndex + 1).Trim();
-            }
+            string clientType = string.Equals(hfRole.Value, "Business", StringComparison.OrdinalIgnoreCase)
+                ? "Business"
+                : "Individual";
 
-            // 4. Hash Password
-            string passwordHash = HashPassword(rawPassword);
+            Db.NonQuery("INSERT INTO dbo.[Client] (UserID, ClientType) VALUES (@u, @t)",
+                "@u", userId, "@t", clientType);
 
-            // 5. Execute Stored Procedure via ADO.NET
-            string connString = ConfigurationManager.ConnectionStrings["LogistiCoreDB"].ConnectionString;
+            NotificationService.Send(userId, null,
+                "Welcome to Logisticore Courier Service! Your account is ready to use.", "System");
 
-            using (SqlConnection conn = new SqlConnection(connString))
-            {
-                using (SqlCommand cmd = new SqlCommand("dbo.sp_RegisterUser", conn))
-                {
-                    cmd.CommandType = CommandType.StoredProcedure;
-
-                    cmd.Parameters.AddWithValue("@Email", email.ToLower());
-                    cmd.Parameters.AddWithValue("@PasswordHash", passwordHash);
-                    cmd.Parameters.AddWithValue("@FirstName", firstName);
-                    cmd.Parameters.AddWithValue("@LastName", string.IsNullOrEmpty(lastName) ? firstName : lastName);
-                    cmd.Parameters.AddWithValue("@PhoneNumber", string.IsNullOrEmpty(phone) ? (object)DBNull.Value : phone);
-                    cmd.Parameters.AddWithValue("@RoleName", dbRoleName);
-
-                    try
-                    {
-                        conn.Open();
-                        using (SqlDataReader reader = cmd.ExecuteReader())
-                        {
-                            if (reader.Read())
-                            {
-                                string approvalStatus = reader["ApprovalStatus"].ToString();
-
-                                // Success! Redirect to login page with a query flag
-                                Response.Redirect($"Login.aspx?registered=true&status={approvalStatus}", false);
-                                Context.ApplicationInstance.CompleteRequest();
-                            }
-                        }
-                    }
-                    catch (SqlException ex)
-                    {
-                        // Duplicate Email violation (Unique constraint)
-                        if (ex.Number == 2627 || ex.Number == 2601)
-                        {
-                            ShowError("An account with this email address already exists.");
-                        }
-                        else
-                        {
-                            ShowError("Database error: " + ex.Message);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        ShowError("An error occurred during registration: " + ex.Message);
-                    }
-                }
-            }
+            Response.Redirect(ResolveUrl("~/Login.aspx?registered=1"));
         }
 
-        private void ShowError(string message)
+        private void SetStatus(string kind, string message)
         {
-            lblError.Text = message;
-            lblError.Visible = true;
-        }
-
-        // SHA-256 Hash Helper (or replace with BCrypt.Net.BCrypt.HashPassword if installed)
-        private string HashPassword(string password)
-        {
-            using (SHA256 sha256 = SHA256.Create())
-            {
-                byte[] bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
-                StringBuilder builder = new StringBuilder();
-                for (int i = 0; i < bytes.Length; i++)
-                {
-                    builder.Append(bytes[i].ToString("x2"));
-                }
-                return builder.ToString();
-            }
+            lblStatus.CssClass = UiHelper.AlertClass(kind);
+            lblStatus.Text = message;
+            lblStatus.Visible = true;
         }
     }
 }

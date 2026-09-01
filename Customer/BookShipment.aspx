@@ -1,6 +1,5 @@
 <%@ Page Title="Book a Shipment" Language="C#" MasterPageFile="~/Site1.Master" AutoEventWireup="true" CodeBehind="BookShipment.aspx.cs" Inherits="ForteLogisticsApp.CustomerPortal.BookShipment" %>
 
-<%@ Page Title="Book Shipment" Language="C#" MasterPageFile="~/Site.Master" AutoEventWireup="true" CodeBehind="BookShipment.aspx.cs" Inherits="LogistiCoreV5.BookShipment" %>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="head" runat="server">
     <style>
@@ -142,7 +141,7 @@
                     </div>
 
                     <div class="flex justify-end">
-                        <asp:Button ID="btnNextAddress" runat="server" Text="Next: Addresses →" OnClick="btnNextAddress_Click" CssClass="px-6 py-3 bg-[#1d2b45] text-white font-semibold text-sm rounded-lg hover:bg-[#152035] transition-colors shadow-sm cursor-pointer" />
+                        <asp:Button ID="btnNextAddress" runat="server" Text="Next: Addresses →" OnClick="btnNextAddress_Click" CssClass="fcl-btn" />
                     </div>
                 </asp:View>
 
@@ -160,16 +159,16 @@
                             <div class="space-y-3">
                                 <div>
                                     <label class="block text-xs font-semibold text-on-surface-variant mb-1">Street Address</label>
-                                    <asp:TextBox ID="txtPickupStreet" runat="server" Text="6 St Georges Rd" CssClass="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface-container-lowest text-sm" />
+                                    <asp:TextBox ID="txtPickupStreet" runat="server" CssClass="fcl-input" placeholder="6 St Georges Rd" />
                                 </div>
                                 <div class="grid grid-cols-2 gap-2">
                                     <div>
                                         <label class="block text-xs font-semibold text-on-surface-variant mb-1">City</label>
-                                        <asp:TextBox ID="txtPickupCity" runat="server" Text="KuGompo" CssClass="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface-container-lowest text-sm" />
+                                        <asp:DropDownList ID="ddlPickupCity" runat="server" CssClass="fcl-input" />
                                     </div>
                                     <div>
                                         <label class="block text-xs font-semibold text-on-surface-variant mb-1">Postal Code</label>
-                                        <asp:TextBox ID="txtPickupPostal" runat="server" Text="5213" CssClass="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface-container-lowest text-sm" />
+                                        <asp:TextBox ID="txtPickupPostal" runat="server" CssClass="fcl-input" placeholder="2000" />
                                     </div>
                                 </div>
                             </div>
@@ -183,16 +182,16 @@
                             <div class="space-y-3">
                                 <div>
                                     <label class="block text-xs font-semibold text-on-surface-variant mb-1">Street Address</label>
-                                    <asp:TextBox ID="txtDeliveryStreet" runat="server" Text="50 Church Street" CssClass="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface-container-lowest text-sm" />
+                                    <asp:TextBox ID="txtDeliveryStreet" runat="server" CssClass="fcl-input" placeholder="50 Church Street" />
                                 </div>
                                 <div class="grid grid-cols-2 gap-2">
                                     <div>
                                         <label class="block text-xs font-semibold text-on-surface-variant mb-1">City</label>
-                                        <asp:TextBox ID="txtDeliveryCity" runat="server" Text="KuGompo" CssClass="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface-container-lowest text-sm" />
+                                        <asp:DropDownList ID="ddlDeliveryCity" runat="server" CssClass="fcl-input" />
                                     </div>
                                     <div>
                                         <label class="block text-xs font-semibold text-on-surface-variant mb-1">Postal Code</label>
-                                        <asp:TextBox ID="txtDeliveryPostal" runat="server" Text="5213" CssClass="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface-container-lowest text-sm" />
+                                        <asp:TextBox ID="txtDeliveryPostal" runat="server" CssClass="fcl-input" placeholder="8001" />
                                     </div>
                                 </div>
                             </div>
@@ -200,15 +199,15 @@
                     </div>
 
                     <div class="flex justify-between items-center">
-                        <asp:Button ID="btnBackToParcel" runat="server" Text="← Back" OnClick="btnBackToParcel_Click" CssClass="px-5 py-2.5 border border-outline-variant text-on-surface font-semibold text-sm rounded-lg hover:bg-surface-container-low transition-colors cursor-pointer" />
-                        <asp:Button ID="btnNextPayment" runat="server" Text="Next: Payment →" OnClick="btnNextPayment_Click" CssClass="px-6 py-3 bg-[#1d2b45] text-white font-semibold text-sm rounded-lg hover:bg-[#152035] transition-colors shadow-sm cursor-pointer" />
+                        <asp:Button ID="btnBackToParcel" runat="server" Text="← Back" OnClick="btnBackToParcel_Click" CssClass="fcl-btn fcl-btn-dark" />
+                        <asp:Button ID="btnNextPayment" runat="server" Text="Next: Recipient →" OnClick="btnNextPayment_Click" CssClass="fcl-btn" />
                     </div>
                 </asp:View>
 
                 <!-- STEP 3: PAYMENT -->
                 <asp:View ID="vwPayment" runat="server">
-                    <h2 class="text-2xl font-bold text-on-surface mb-1">Step 3: Payment Details</h2>
-                    <p class="text-sm text-on-surface-variant mb-6">Review order summary and complete payment.</p>
+                    <h2 class="text-2xl font-bold text-on-surface mb-1">Step 3: Recipient &amp; Confirm</h2>
+                    <p class="text-sm text-on-surface-variant mb-6">Confirm the recipient and review your quote.</p>
 
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                         
@@ -222,11 +221,11 @@
                                 </div>
                                 <div class="flex justify-between">
                                     <span>Collection:</span>
-                                    <asp:Label ID="lblSummaryPickup" runat="server" CssClass="text-on-surface" Text="KuGompo" />
+                                    <asp:Label ID="lblSummaryPickup" runat="server" CssClass="text-on-surface" />
                                 </div>
                                 <div class="flex justify-between">
                                     <span>Delivery:</span>
-                                    <asp:Label ID="lblSummaryDelivery" runat="server" CssClass="text-on-surface" Text="KuGompo" />
+                                    <asp:Label ID="lblSummaryDelivery" runat="server" CssClass="text-on-surface" />
                                 </div>
                             </div>
                             <div class="mt-4 pt-3 border-t border-outline-variant/60 flex justify-between items-center">
@@ -235,38 +234,43 @@
                             </div>
                         </div>
 
-                        <!-- Card Payment Form -->
+                        <!-- Recipient & billing -->
                         <div class="md:col-span-2 p-4 bg-surface-container-low rounded-xl border border-outline-variant">
                             <h3 class="font-bold text-on-surface mb-3 flex items-center gap-2">
-                                <span class="material-symbols-outlined text-primary">credit_card</span> Payment Details
+                                <span class="material-symbols-outlined text-primary">person</span> Recipient Details
                             </h3>
                             <div class="space-y-3">
                                 <div>
-                                    <label class="block text-xs font-semibold text-on-surface-variant mb-1">Cardholder Name</label>
-                                    <asp:TextBox ID="txtCardName" runat="server" Placeholder="L Matiwane" CssClass="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface-container-lowest text-sm" />
+                                    <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1" for="<%= txtReceiver.ClientID %>">Recipient Name *</label>
+                                    <asp:TextBox ID="txtReceiver" runat="server" CssClass="fcl-input" placeholder="Full name of the person receiving the parcel" />
+                                    <asp:RequiredFieldValidator ID="rfvReceiver" runat="server" ControlToValidate="txtReceiver"
+                                        Display="Dynamic" ValidationGroup="Book" ErrorMessage="Recipient name is required."
+                                        CssClass="block font-label-sm text-label-sm text-error mt-1" />
                                 </div>
                                 <div>
-                                    <label class="block text-xs font-semibold text-on-surface-variant mb-1">Card Number</label>
-                                    <asp:TextBox ID="txtCardNumber" runat="server" Placeholder="•••• •••• •••• ••••" CssClass="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface-container-lowest text-sm" />
+                                    <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1" for="<%= txtReceiverPhone.ClientID %>">Recipient Phone</label>
+                                    <asp:TextBox ID="txtReceiverPhone" runat="server" TextMode="Phone" CssClass="fcl-input" placeholder="071 234 5678" />
                                 </div>
-                                <div class="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <label class="block text-xs font-semibold text-on-surface-variant mb-1">Expiry Date</label>
-                                        <asp:TextBox ID="txtCardExpiry" runat="server" Placeholder="MM/YY" CssClass="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface-container-lowest text-sm" />
-                                    </div>
-                                    <div>
-                                        <label class="block text-xs font-semibold text-on-surface-variant mb-1">CVV</label>
-                                        <asp:TextBox ID="txtCardCVV" runat="server" Placeholder="123" TextMode="Password" MaxLength="4" CssClass="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface-container-lowest text-sm" />
-                                    </div>
+                                <div>
+                                    <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1" for="<%= txtDescription.ClientID %>">Parcel Description</label>
+                                    <asp:TextBox ID="txtDescription" runat="server" TextMode="MultiLine" Rows="2" CssClass="fcl-input" placeholder="e.g. Documents, laptop, clothing" />
                                 </div>
                             </div>
+
+                            <div class="fcl-alert fcl-alert-info mt-stack-sm">
+                                <span class="material-symbols-outlined mr-1">receipt_long</span>
+                                Confirming this booking raises an invoice on your account. You can settle it at any
+                                time under <strong>My Invoices</strong> - no card details are needed now.
+                            </div>
+
+                            <asp:Label ID="lblStatus" runat="server" CssClass="mt-stack-sm" />
                         </div>
 
                     </div>
 
                     <div class="flex justify-between items-center">
-                        <asp:Button ID="btnBackToAddresses" runat="server" Text="← Back" OnClick="btnBackToAddresses_Click" CssClass="px-5 py-2.5 border border-outline-variant text-on-surface font-semibold text-sm rounded-lg hover:bg-surface-container-low transition-colors cursor-pointer" />
-                        <asp:Button ID="btnConfirmPayment" runat="server" Text="Pay & Confirm Booking" OnClick="btnConfirmPayment_Click" CssClass="px-6 py-3 bg-[#1d2b45] text-white font-semibold text-sm rounded-lg hover:bg-[#152035] transition-colors shadow-sm cursor-pointer" />
+                        <asp:Button ID="btnBackToAddresses" runat="server" Text="← Back" OnClick="btnBackToAddresses_Click" CssClass="fcl-btn fcl-btn-dark" />
+                        <asp:Button ID="btnConfirmPayment" runat="server" Text="Confirm Booking" OnClick="btnConfirmPayment_Click" ValidationGroup="Book" CssClass="fcl-btn" />
                     </div>
                 </asp:View>
 
@@ -310,7 +314,7 @@
             <asp:Label ID="lblWaybillTracking" runat="server" Font-Bold="true" CssClass="font-mono text-2xl tracking-widest text-slate-900 block mb-2" />
             
             <!-- Generated Barcode Image -->
-            <asp:Image ID="imgBarcode" runat="server" CssClass="mx-auto h-16 max-w-full object-contain" Alt="Waybill Barcode" />
+            <svg id="waybillBarcode" class="mx-auto h-16 max-w-full"></svg>
         </div>
 
         <!-- Addresses Grid -->
@@ -322,7 +326,7 @@
                     <asp:Label ID="lblWaybillSenderName" runat="server" Text="Sender" /><br />
                 </div>
                 <div class="text-xs text-slate-700 mt-1 space-y-0.5">
-                    <asp:Label ID="lblWaybillPickupStreet" runat="server" block /><br />
+                    <asp:Label ID="lblWaybillPickupStreet" runat="server" CssClass="block" /><br />
                     <asp:Label ID="lblWaybillPickupCity" runat="server" /> <asp:Label ID="lblWaybillPickupPostal" runat="server" />
                 </div>
             </div>
@@ -334,7 +338,7 @@
                     <asp:Label ID="lblWaybillReceiverName" runat="server" Text="Recipient" /><br />
                 </div>
                 <div class="text-xs text-slate-700 mt-1 space-y-0.5">
-                    <asp:Label ID="lblWaybillDeliveryStreet" runat="server" block /><br />
+                    <asp:Label ID="lblWaybillDeliveryStreet" runat="server" CssClass="block" /><br />
                     <asp:Label ID="lblWaybillDeliveryCity" runat="server" /> <asp:Label ID="lblWaybillDeliveryPostal" runat="server" />
                 </div>
             </div>

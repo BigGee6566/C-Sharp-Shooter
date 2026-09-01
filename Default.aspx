@@ -1,204 +1,35 @@
-﻿<%@ Page Title="Home" Language="C#" MasterPageFile="~/Site1.Master" AutoEventWireup="true" CodeBehind="Default.aspx.cs" Inherits="ForteLogisticsApp.Default" %>
+<%@ Page Title="Home" Language="C#" MasterPageFile="~/Site1.Master" AutoEventWireup="true" CodeBehind="Default.aspx.cs" Inherits="ForteLogisticsApp.Default" %>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="HeadContent" runat="server">
-</asp:Content>
-
-<asp:Content ID="Content2" ContentPlaceHolderID="MainContent" runat="server">
-        <title>LOGISTICORE | Forte Courier &amp; Logistics - Precision in Motion</title>
-    
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com" rel="preconnect"/>
-    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
-    <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600&amp;family=JetBrains+Mono:wght@500&amp;family=Montserrat:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
-    
-    <!-- Material Symbols -->
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
-    
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <script id="tailwind-config">
-        tailwind.config = {
-            darkMode: "class",
-            theme: {
-                extend: {
-                    "colors": {
-                        "secondary-fixed-dim": "#ffb2be",
-                        "surface-tint": "#215abd",
-                        "surface-container-lowest": "#ffffff",
-                        "surface-container": "#ebeef0",
-                        "error-container": "#ffdad6",
-                        "secondary-container": "#e2165f",
-                        "on-error": "#ffffff",
-                        "background": "#f7fafc",
-                        "on-primary": "#ffffff",
-                        "on-primary-container": "#a9c1ff",
-                        "on-tertiary-container": "#c3c1c0",
-                        "surface-container-high": "#e5e9eb",
-                        "secondary-fixed": "#ffd9de",
-                        "on-tertiary-fixed-variant": "#474646",
-                        "tertiary": "#393838",
-                        "tertiary-fixed-dim": "#c8c6c5",
-                        "secondary": "#b80049",
-                        "on-tertiary-fixed": "#1c1b1b",
-                        "primary-fixed-dim": "#b0c6ff",
-                        "surface-bright": "#f7fafc",
-                        "inverse-on-surface": "#eef1f3",
-                        "surface-variant": "#e0e3e5",
-                        "surface-container-low": "#f1f4f6",
-                        "tertiary-fixed": "#e5e2e1",
-                        "on-tertiary": "#ffffff",
-                        "on-error-container": "#93000a",
-                        "inverse-primary": "#b0c6ff",
-                        "on-surface": "#181c1e",
-                        "on-secondary-fixed-variant": "#900038",
-                        "on-primary-fixed-variant": "#00429b",
-                        "error": "#ba1a1a",
-                        "on-secondary": "#ffffff",
-                        "surface-container-highest": "#e0e3e5",
-                        "on-surface-variant": "#434653",
-                        "on-secondary-fixed": "#400014",
-                        "primary": "#00357f",
-                        "outline": "#737784",
-                        "surface-dim": "#d7dadc",
-                        "outline-variant": "#c3c6d5",
-                        "tertiary-container": "#504f4f",
-                        "surface": "#f7fafc",
-                        "primary-fixed": "#d9e2ff",
-                        "primary-container": "#004aad",
-                        "inverse-surface": "#2d3133",
-                        "on-primary-fixed": "#001945",
-                        "on-secondary-container": "#fffbff",
-                        "on-background": "#181c1e"
-                    },
-                    "borderRadius": {
-                        "DEFAULT": "0.125rem",
-                        "lg": "0.25rem",
-                        "xl": "0.5rem",
-                        "full": "0.75rem"
-                    },
-                    "spacing": {
-                        "container-max": "1280px",
-                        "margin-desktop": "40px",
-                        "margin-mobile": "16px",
-                        "unit": "8px",
-                        "gutter": "24px",
-                        "glass-padding": "20px"
-                    },
-                    "fontFamily": {
-                        "headline-md": ["Montserrat"],
-                        "headline-lg": ["Montserrat"],
-                        "body-lg": ["Montserrat"],
-                        "body-md": ["Montserrat"],
-                        "label-bold": ["Montserrat"],
-                        "headline-xl": ["Montserrat"],
-                        "headline-lg-mobile": ["Montserrat"],
-                        "label-sm": ["Montserrat"],
-                        "display-lg": ["Montserrat"]
-                    },
-                    "fontSize": {
-                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
-                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700" }],
-                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
-                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
-                        "label-bold": ["14px", { "lineHeight": "20px", "fontWeight": "700" }],
-                        "headline-xl": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "800" }],
-                        "headline-lg-mobile": ["28px", { "lineHeight": "36px", "fontWeight": "700" }],
-                        "label-sm": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
-                        "display-lg": ["56px", { "lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "900" }]
-                    }
-                },
-            },
-        }
-    </script>
     <style>
-        .material-symbols-outlined {
-            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-        }
-        
-        .glass-panel {
-            backdrop-filter: blur(20px);
-            background: rgba(255, 255, 255, 0.7);
-            border: 1px solid rgba(0, 53, 127, 0.1);
-        }
-
-        .hero-glass {
-            backdrop-filter: blur(40px);
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(247, 250, 252, 0.8) 100%);
-            border: 1px solid rgba(0, 53, 127, 0.15);
-            box-shadow: 0 25px 50px -12px rgba(0, 53, 127, 0.1);
-        }
-
+        /* Landing-page only. Shared tokens, .fcl-* components, .hero-glass, .glass-panel,
+           .tab-active and .no-scrollbar all come from Site1.Master. */
         .primary-gradient-btn {
             background: linear-gradient(45deg, #004aad, #e2165f);
             transition: all 0.3s ease;
         }
-
         .primary-gradient-btn:hover {
             opacity: 0.9;
             transform: translateY(-2px);
             box-shadow: 0 0 20px rgba(0, 74, 173, 0.3);
         }
-
         .logo-gradient {
             background: linear-gradient(90deg, #004aad 0%, #e2165f 100%);
             background-clip: text;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
-
-        .tab-active {
-            border-bottom: 2px solid #004aad;
-            color: #004aad;
-        }
-
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-
         @keyframes pulse-soft {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.8; }
         }
         .animate-pulse-soft { animation: pulse-soft 3s infinite ease-in-out; }
     </style>
-</head>
-<body class="bg-surface text-on-surface selection:bg-primary selection:text-on-primary">
-    <form id="form1" runat="server">
-        <!-- Utility Bar -->
-        <div class="bg-surface-container-lowest w-full h-8 flex items-center justify-end gap-gutter px-margin-desktop border-b border-outline-variant/30">
-            <div class="flex gap-6 font-label-sm text-label-sm text-outline">
-                <span class="cursor-pointer hover:text-secondary transition-colors">+1 (800) FORTE-LOG</span>
-                <span class="cursor-pointer hover:text-secondary transition-colors">support@fortecourier.com</span>
-                <span class="cursor-pointer hover:text-secondary transition-colors">Global Network</span>
-            </div>
-        </div>
+</asp:Content>
 
-        <!-- TopNavBar -->
-        <header class="fixed top-8 w-full z-50 bg-surface/90 backdrop-blur-xl border-b border-outline-variant/20 shadow-sm transition-all duration-300 ease-in-out">
-            <div class="flex justify-between items-center px-margin-desktop py-4 max-w-[1440px] mx-auto">
-                <div class="font-display-lg text-headline-md tracking-tighter text-primary">
-                    <img alt="LOGISTICORE" class="h-10 object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA6P8N-MGJmHsSPiDVb87YafUt3HPsXeDhLL_qN_VEKHZyc9CyaSbF-73btkeMmjmh7ljbGLQRF_1DZPqOHzP4llUvTq82IomQbDVC8KUEKvBu92XriInhLnDLYvD4hdTJFbH9Yh-duiXGe5PNmcBEFED8VHYxG9uRgw-_iMtlkk95Cxc0lTBG7AVwbOOoM5jnYFAaWcLapEOtyDNNmB0CvEbeRDrJfgd0wu6qD3DY846KeIuteorYLy5zPy0W_5uAgTsI"/>
-                </div>
-                <!-- Navigation links with section targets -->
-                <nav class="hidden md:flex items-center gap-8 font-body-md text-body-md">
-                    <a class="text-on-surface-variant hover:text-primary transition-colors" href="#services">Services</a>
-                    <a class="text-on-surface-variant hover:text-primary transition-colors" href="#solutions">Solutions</a>
-                    <a class="text-on-surface-variant hover:text-primary transition-colors" href="#hero-tool" onclick="switchTab('track')">Track Parcel</a>
-                    <a class="text-on-surface-variant hover:text-primary transition-colors" href="#hero-tool" onclick="switchTab('quote')">Get a Quote</a>
-                    <a class="text-on-surface-variant hover:text-primary transition-colors" href="#contact">Contact Us</a>
-                </nav>
-                <div class="flex gap-4 items-center">
-                    <a href="Login.aspx" class="px-6 py-2 text-primary font-bold uppercase tracking-widest text-label-sm hover:text-secondary transition-colors flex items-center">
-                        Login
-                    </a>
-                    <a href="Register.aspx" class="px-6 py-2 primary-gradient-btn text-white font-bold uppercase tracking-widest text-label-sm rounded-lg inline-flex items-center justify-center">
-                        Register
-                    </a>
-                </div>
-            </div>
-        </header>
-
+<asp:Content ID="Content2" ContentPlaceHolderID="MainContent" runat="server">
         <!-- Main Content -->
-        <main class="pt-24">
+        <main>
             <!-- Hero Section -->
             <section class="relative min-h-[921px] flex items-center px-margin-desktop overflow-hidden">
                 <div class="absolute inset-0 z-0">
@@ -237,11 +68,10 @@
                                     <label class="font-label-sm text-label-sm text-outline mb-2 block uppercase tracking-widest">Waybill / Tracking Number</label>
                                     <asp:TextBox ID="txtTrackingNumber" runat="server" CssClass="w-full bg-surface-container-lowest border border-outline-variant rounded-xl p-4 text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary font-label-sm text-lg uppercase" placeholder="e.g. FORTE-9283-492" />
                                 </div>
-                                <button type="button" class="w-full py-4 primary-gradient-btn text-white font-bold uppercase tracking-widest rounded-xl flex justify-center items-center gap-2">
-                                    <span class="material-symbols-outlined">my_location</span> Track Shipment
-                                </button>
+                                <asp:Button ID="btnTrack" runat="server" Text="Track Shipment" OnClick="btnTrack_Click"
+                                    CssClass="w-full py-4 primary-gradient-btn text-on-primary font-bold uppercase tracking-widest rounded-xl cursor-pointer border-0" />
                                 <asp:Label ID="lblTrackResult" runat="server" CssClass="block text-center font-label-sm text-sm text-primary font-bold" />
-                                <p class="text-center text-outline font-label-sm text-xs">Tracking global shipments across 180+ countries in real-time.</p>
+                                <p class="text-center text-outline font-label-sm text-xs">Tracking parcels across South Africa in real time.</p>
                             </div>
 
                             <!-- Quote Form -->
@@ -250,17 +80,21 @@
                                     <div>
                                         <label class="font-label-sm text-label-sm text-outline mb-2 block uppercase">Origin</label>
                                         <asp:DropDownList ID="ddlOrigin" runat="server" CssClass="w-full bg-surface-container-lowest border border-outline-variant rounded-xl p-4 text-on-surface focus:outline-none focus:border-primary font-body-md appearance-none">
-                                            <asp:ListItem Text="New York, USA" Value="NY" />
-                                            <asp:ListItem Text="London, UK" Value="LDN" />
-                                            <asp:ListItem Text="Singapore" Value="SG" />
+                                            <asp:ListItem Text="Johannesburg" Value="Johannesburg" />
+                                            <asp:ListItem Text="Cape Town" Value="Cape Town" />
+                                            <asp:ListItem Text="Durban" Value="Durban" />
+                                            <asp:ListItem Text="Gqeberha" Value="Gqeberha" />
+                                            <asp:ListItem Text="Bloemfontein" Value="Bloemfontein" />
                                         </asp:DropDownList>
                                     </div>
                                     <div>
                                         <label class="font-label-sm text-label-sm text-outline mb-2 block uppercase">Destination</label>
                                         <asp:DropDownList ID="ddlDestination" runat="server" CssClass="w-full bg-surface-container-lowest border border-outline-variant rounded-xl p-4 text-on-surface focus:outline-none focus:border-primary font-body-md appearance-none">
-                                            <asp:ListItem Text="Dubai, UAE" Value="DXB" />
-                                            <asp:ListItem Text="Berlin, Germany" Value="BER" />
-                                            <asp:ListItem Text="Tokyo, Japan" Value="TYO" />
+                                            <asp:ListItem Text="Cape Town" Value="Cape Town" />
+                                            <asp:ListItem Text="Johannesburg" Value="Johannesburg" />
+                                            <asp:ListItem Text="Durban" Value="Durban" />
+                                            <asp:ListItem Text="Gqeberha" Value="Gqeberha" />
+                                            <asp:ListItem Text="Bloemfontein" Value="Bloemfontein" />
                                         </asp:DropDownList>
                                     </div>
                                 </div>
@@ -268,7 +102,8 @@
                                     <label class="font-label-sm text-label-sm text-outline mb-2 block uppercase">Estimated Weight (KG)</label>
                                     <asp:TextBox ID="txtWeight" runat="server" TextMode="Number" CssClass="w-full bg-surface-container-lowest border border-outline-variant rounded-xl p-4 text-on-surface focus:outline-none focus:border-primary font-label-sm" placeholder="0.00" />
                                 </div>
-                                <button type="button" class="w-full py-4 primary-gradient-btn text-white font-bold uppercase tracking-widest rounded-xl">Calculate Quote</button>
+                                <asp:Button ID="btnCalculate" runat="server" Text="Calculate Quote" OnClick="btnCalculate_Click"
+                                    CssClass="w-full py-4 primary-gradient-btn text-on-primary font-bold uppercase tracking-widest rounded-xl cursor-pointer border-0" />
                                 <asp:Label ID="lblQuoteResult" runat="server" CssClass="block text-center font-label-sm text-sm text-primary font-bold" />
                             </div>
                         </div>
@@ -382,7 +217,7 @@
                             <p class="font-body-lg text-body-lg text-on-surface-variant mb-0">Experience priority dispatch, bulk pricing, and dedicated account managers. Scale your logistics with our API-integrated platform.</p>
                         </div>
                         <div class="relative z-10">
-                            <a href="Register.aspx?role=business" class="px-12 py-5 primary-gradient-btn text-white font-bold uppercase tracking-widest text-label-sm rounded-xl inline-flex items-center justify-center">
+                            <a href="<%= ResolveUrl("~/Register.aspx?role=Business") %>" class="px-12 py-5 primary-gradient-btn text-white font-bold uppercase tracking-widest text-label-sm rounded-xl inline-flex items-center justify-center">
                                 Register Business Account
                             </a>
                         </div>
@@ -390,49 +225,6 @@
                 </div>
             </section>
         </main>
-
-        <!-- Footer / Contact Us Target Section -->
-        <footer id="contact" class="w-full py-12 border-t border-outline-variant/30 bg-surface-container-lowest">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-gutter px-margin-desktop max-w-[1440px] mx-auto">
-                <div class="col-span-1 md:col-span-2 lg:col-span-1">
-                    <div class="mb-6">
-                        <img alt="LOGISTICORE" class="h-8 object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAXrTknoGMdU9oqiRf-Ae1rHOe_yKL263ej4vYtOUIu7UZaKLdTayvUNzya2_Pdel1w19QuynKDWYPYhlKGRx3BueuRdu6DYKChAgqmKD4GhL8BZw90YfFkSpgMajwpJnYYKhYSx3PCllkXtdMRiC8RUJ5toueA_yxuT3SdFN2nZF8hFsScK5lCJE-jorSSdtcIal5ZWdLeYwI5pDPAJ5JAhEo8uBHlvf-4hlncAGEmkHhzJcODsFlFYfzRXqfTY6jV6uM"/>
-                    </div>
-                    <p class="font-body-md text-body-md text-on-surface-variant mb-8 max-w-xs">Precision engineering for global movement. The backbone of your supply chain.</p>
-                    <div class="flex gap-4">
-                        <span class="material-symbols-outlined text-outline hover:text-primary cursor-pointer transition-colors">hub</span>
-                        <span class="material-symbols-outlined text-outline hover:text-primary cursor-pointer transition-colors">satellite_alt</span>
-                        <span class="material-symbols-outlined text-outline hover:text-primary cursor-pointer transition-colors">public</span>
-                    </div>
-                </div>
-                <div>
-                    <h4 class="font-headline-md text-headline-md text-on-surface mb-6">Quick Links</h4>
-                    <ul class="space-y-3 font-body-md text-body-md">
-                        <li><a class="text-on-surface-variant hover:text-primary transition-all" href="#services">Services</a></li>
-                        <li><a class="text-on-surface-variant hover:text-primary transition-all" href="#solutions">Solutions</a></li>
-                        <li><a class="text-on-surface-variant hover:text-primary transition-all" href="#hero-tool" onclick="switchTab('track')">Track Parcel</a></li>
-                        <li><a class="text-on-surface-variant hover:text-primary transition-all" href="#hero-tool" onclick="switchTab('quote')">Get a Quote</a></li>
-                    </ul>
-                </div>
-                <div>
-                    <h4 class="font-headline-md text-headline-md text-on-surface mb-6">Support</h4>
-                    <ul class="space-y-3 font-body-md text-body-md">
-                        <li><a class="text-on-surface-variant hover:text-primary transition-all" href="#contact">Contact Us</a></li>
-                        <li><a class="text-on-surface-variant hover:text-primary transition-all" href="#">Privacy Policy</a></li>
-                        <li><a class="text-on-surface-variant hover:text-primary transition-all" href="#">Terms of Service</a></li>
-                        <li><a class="text-on-surface-variant hover:text-primary transition-all" href="#">Compliance</a></li>
-                    </ul>
-                </div>
-                <div>
-                    <h4 class="font-headline-md text-headline-md text-on-surface mb-6">Join Us</h4>
-                    <p class="font-body-md text-body-md text-on-surface-variant mb-4">Are you a fleet owner?</p>
-                    <a class="text-primary font-bold uppercase tracking-widest text-label-sm border-b-2 border-primary/20 hover:border-primary transition-all" href="#">Carrier Portal</a>
-                </div>
-            </div>
-            <div class="max-w-[1440px] mx-auto px-margin-desktop mt-20 pt-8 border-t border-outline-variant/30 text-center">
-                <p class="font-body-md text-body-md text-on-surface-variant">© 2024 Forte Courier &amp; Logistics. All Rights Reserved. Precision in Motion.</p>
-            </div>
-        </footer>
 
         <!-- Service Detail Modal -->
         <div class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4" id="serviceModal">
@@ -496,12 +288,14 @@
                     </div>
                 </div>
                 <div class="p-8 border-t border-outline-variant/30 flex justify-end bg-surface">
-                    <button type="button" class="px-8 py-3 primary-gradient-btn text-white font-bold uppercase rounded-lg">Get Started with this Service</button>
+                    <a href="<%= ResolveUrl("~/Register.aspx") %>" class="px-8 py-3 primary-gradient-btn text-on-primary font-bold uppercase rounded-lg inline-block">Get Started with this Service</a>
                 </div>
             </div>
         </div>
     </form>
+</asp:Content>
 
+<asp:Content ID="Content3" ContentPlaceHolderID="ScriptContent" runat="server">
     <script>
         // Tab switching logic
         function switchTab(type) {
@@ -540,17 +334,5 @@
             document.body.style.overflow = 'auto';
         }
 
-        // Scroll effect for Navbar
-        window.addEventListener('scroll', () => {
-            const header = document.querySelector('header');
-            if (window.scrollY > 20) {
-                header.classList.add('top-0');
-                header.classList.remove('top-8');
-            } else {
-                header.classList.remove('top-0');
-                header.classList.add('top-8');
-            }
-        });
     </script>
-</body>
 </asp:Content>

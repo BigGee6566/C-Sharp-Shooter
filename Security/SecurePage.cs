@@ -42,22 +42,30 @@ namespace ForteLogisticsApp.Security
         /// every assignment query joins on - so this, not the role, is the question to ask
         /// when deciding whether to show driver-only navigation.
         ///
-        /// Cached per session because the master page asks on every render.
+        /// Cached for the duration of the request only.
+        ///
+        /// It used to be cached in Session, which meant an admin ticking or clearing the
+        /// "Is a driver" box in Admin -> Users had no effect until that user signed out and
+        /// back in - and there is no way for one request to reach another user's session to
+        /// invalidate it. Per-request caching still collapses the repeated calls a single
+        /// render makes, while picking up the change on the very next page load.
         /// </summary>
         public static bool IsDriver(int userId)
         {
             if (userId <= 0) return false;
 
-            var session = HttpContext.Current != null ? HttpContext.Current.Session : null;
-            if (session != null && session["IsDriver"] is bool)
+            var context = HttpContext.Current;
+            string cacheKey = "IsDriver:" + userId;
+
+            if (context != null && context.Items[cacheKey] is bool)
             {
-                return (bool)session["IsDriver"];
+                return (bool)context.Items[cacheKey];
             }
 
             bool isDriver = Data.Db.ToInt(Data.Db.Scalar(
                 "SELECT COUNT(*) FROM dbo.[Driver] WHERE UserID = @u", "@u", userId)) > 0;
 
-            if (session != null) session["IsDriver"] = isDriver;
+            if (context != null) context.Items[cacheKey] = isDriver;
             return isDriver;
         }
 

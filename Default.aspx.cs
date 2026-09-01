@@ -1,64 +1,106 @@
 using System;
 using System.Data;
-using System.Data.SqlClient;
+using System.Text;
+using ForteLogisticsApp.Data;
+using ForteLogisticsApp.Security;
+using ForteLogisticsApp.Services;
 
-namespace LogistiCoreV5
+namespace ForteLogisticsApp
 {
-    public partial class HomePage : System.Web.UI.Page
+    /// <summary>
+    /// Public landing page. The two tools it offers - waybill tracking and a price quote -
+    /// are deliberately available without signing in, so this derives from BasePage (which
+    /// binds ViewState to the session) rather than SecurePage.
+    /// </summary>
+    public partial class Default : BasePage
     {
         protected void Page_Load(object sender, EventArgs e)
         {
         }
 
-        protected void btnClientLogin_Click(object sender, EventArgs e)
+        protected void btnTrack_Click(object sender, EventArgs e)
         {
-            Response.Redirect("Login.aspx");
-        }
+            string waybill = txtTrackingNumber.Text.Trim();
 
-        protected void btnBookShipment_Click(object sender, EventArgs e)
-        {
-            Response.Redirect("Login.aspx");
-        }
-
-        protected void btnTrackShipment_Click(object sender, EventArgs e)
-        {
-            string trackingNum = txtTrackingNumber.Text.Trim();
-
-            if (string.IsNullOrEmpty(trackingNum))
+            if (string.IsNullOrEmpty(waybill))
             {
-                lblTrackResult.Text = "Please enter a tracking number.";
+                lblTrackResult.CssClass = UiHelper.AlertClass("error") + " mt-4";
+                lblTrackResult.Text = "Please enter a valid waybill or tracking number.";
                 return;
             }
 
-            string query = "SELECT Destination, Status FROM Shipments WHERE TrackingNumber = @TrackingNumber";
-            SqlParameter[] parameters = {
-                new SqlParameter("@TrackingNumber", trackingNum)
-            };
+            DataTable shipment = Db.Query(
+                @"SELECT ShipmentID, TrackingNumber, DeliveryStatus, OriginCity, DestCity,
+                         DeliveryAddress, ShipmentDate, DeliveryDate
+                  FROM dbo.[Shipment] WHERE TrackingNumber = @t", "@t", waybill);
 
-            DataTable dt = DbHelper.GetData(query, parameters);
+            if (shipment.Rows.Count == 0)
+            {
+                lblTrackResult.CssClass = UiHelper.AlertClass("warning") + " mt-4";
+                lblTrackResult.Text =
+                    "<span class='material-symbols-outlined mr-1'>error</span> We couldn't find a parcel with waybill <strong>" +
+                    Server.HtmlEncode(waybill) + "</strong>. Please check the number and try again.";
+                return;
+            }
 
-            if (dt.Rows.Count > 0)
+            DataRow row = shipment.Rows[0];
+            int shipmentId = Db.ToInt(row["ShipmentID"]);
+            string status = Db.ToStr(row["DeliveryStatus"]);
+
+            DataTable latest = Db.Query(
+                @"SELECT TOP 1 Location, Status, Remarks, [Timestamp]
+                  FROM dbo.[TrackingHistory] WHERE ShipmentID = @s ORDER BY [Timestamp] DESC",
+                "@s", shipmentId);
+
+            var sb = new StringBuilder();
+            sb.Append("<div class='flex items-center justify-between font-label-md text-label-md text-on-surface mb-2'>")
+              .Append("<span>Status for ").Append(Server.HtmlEncode(Db.ToStr(row["TrackingNumber"]))).Append("</span>")
+              .Append(UiHelper.StatusBadge(status))
+              .Append("</div>");
+
+            sb.Append("<div class='font-label-sm text-label-sm text-on-surface-variant space-y-1'>");
+            sb.Append("<p><strong>Route:</strong> ")
+              .Append(Server.HtmlEncode(Db.ToStr(row["OriginCity"]))).Append(" &rarr; ")
+              .Append(Server.HtmlEncode(Db.ToStr(row["DestCity"]))).Append("</p>");
+
+            if (latest.Rows.Count > 0)
             {
-                string status = dt.Rows[0]["Status"].ToString();
-                string destination = dt.Rows[0]["Destination"].ToString();
-                lblTrackResult.Text = $"Status: {status} | Destination: {destination}";
+                sb.Append("<p><strong>Latest Update:</strong> ")
+                  .Append(Server.HtmlEncode(Db.ToStr(latest.Rows[0]["Status"]))).Append(" at ")
+                  .Append(Server.HtmlEncode(Db.ToStr(latest.Rows[0]["Location"]))).Append("</p>");
+                sb.Append("<p><strong>When:</strong> ")
+                  .Append(Convert.ToDateTime(latest.Rows[0]["Timestamp"]).ToString("dd MMM yyyy HH:mm"))
+                  .Append("</p>");
             }
-            else
+
+            if (row["DeliveryDate"] != DBNull.Value)
             {
-                lblTrackResult.Text = "Shipment not found. Check tracking number.";
+                sb.Append("<p><strong>Delivered:</strong> ")
+                  .Append(Convert.ToDateTime(row["DeliveryDate"]).ToString("dd MMM yyyy")).Append("</p>");
             }
+            sb.Append("</div>");
+
+            lblTrackResult.CssClass =
+                "block mt-4 p-4 bg-surface-container-lowest rounded-xl border border-outline-variant text-left";
+            lblTrackResult.Text = sb.ToString();
         }
 
-        protected void btnCalculateQuote_Click(object sender, EventArgs e)
+        protected void btnCalculate_Click(object sender, EventArgs e)
         {
-            if (double.TryParse(txtWeight.Text, out double weight))
+            string origin = ddlOrigin.SelectedItem.Text;
+            string destination = ddlDestination.SelectedItem.Text;
+
+            decimal weight;
+            if (CourierService.TryParseWeight(txtWeight.Text, out weight) && weight > 0m)
             {
-                double estimatedCost = weight * 12.5; // Example rate calculation
-                lblQuoteResult.Text = $"Estimated Shipping Cost: ${estimatedCost:F2}";
+                decimal quote = CourierService.CalculateQuote(origin, destination, weight);
+                lblQuoteResult.CssClass = "block text-center font-label-sm text-body-lg text-primary font-bold mt-4";
+                lblQuoteResult.Text = "Estimated cost: R " + quote.ToString("F2");
             }
             else
             {
-                lblQuoteResult.Text = "Please enter a valid weight in KG.";
+                lblQuoteResult.CssClass = UiHelper.AlertClass("error") + " mt-4";
+                lblQuoteResult.Text = "Please enter a valid weight in kilograms.";
             }
         }
     }
