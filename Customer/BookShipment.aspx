@@ -3,10 +3,28 @@
 
 <asp:Content ID="Content1" ContentPlaceHolderID="HeadContent" runat="server">
     <style>
+        /* The radio itself is visually hidden, so the card carries every state. */
         .size-card-input:checked + .size-card {
             border-color: #003399;
             background-color: rgba(0, 51, 153, 0.04);
             box-shadow: 0 0 0 2px #003399;
+        }
+
+        /* Selection must not be conveyed by colour alone. */
+        .size-card-check {
+            display: none;
+        }
+        .size-card-input:checked + .size-card .size-card-check {
+            display: inline-flex;
+        }
+        .size-card-input:checked + .size-card .size-card-icon {
+            display: none;
+        }
+
+        /* Keyboard focus has to be visible even though the input is sr-only. */
+        .size-card-input:focus-visible + .size-card {
+            outline: 3px solid #8aa4ff;
+            outline-offset: 2px;
         }
     </style>
 </asp:Content>
@@ -48,97 +66,46 @@
 
                     <asp:HiddenField ID="hfSelectedSize" runat="server" Value="Small" />
 
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                        
-                        <!-- Small -->
-                        <label class="cursor-pointer relative">
-                            <input type="radio" name="ParcelSizeGroup" value="Small" class="size-card-input sr-only" checked onclick="setSize('Small')" />
-                            <div class="size-card p-4 rounded-xl border border-outline-variant hover:border-primary transition-all h-full flex flex-col justify-between">
-                                <div>
-                                    <div class="flex justify-between items-center mb-2">
-                                        <span class="font-bold text-on-surface text-base">Small</span>
-                                        <span class="material-symbols-outlined text-primary">markunread_mailbox</span>
-                                    </div>
-                                    <p class="text-xs text-on-surface-variant mb-3">e.g. Documents, Books, T-Shirts, Small Electronics</p>
-                                    <div class="text-xs space-y-1 text-on-surface-variant">
-                                        <div><strong>Max Weight:</strong> Up to 2 kg</div>
-                                        <div><strong>Dimensions:</strong> 25 x 15 x 10 cm</div>
-                                    </div>
-                                </div>
-                                <div class="mt-4 pt-3 border-t border-outline-variant/50 text-right">
-                                    <span class="text-xs text-on-surface-variant">Est. From</span>
-                                    <div class="text-lg font-bold text-primary">R 100.00</div>
-                                </div>
-                            </div>
-                        </label>
+                    <fieldset class="border-0 p-0 m-0">
+                        <legend class="sr-only">Parcel size</legend>
 
-                        <!-- Medium -->
-                        <label class="cursor-pointer relative">
-                            <input type="radio" name="ParcelSizeGroup" value="Medium" class="size-card-input sr-only" onclick="setSize('Medium')" />
-                            <div class="size-card p-4 rounded-xl border border-outline-variant hover:border-primary transition-all h-full flex flex-col justify-between">
-                                <div>
-                                    <div class="flex justify-between items-center mb-2">
-                                        <span class="font-bold text-on-surface text-base">Medium</span>
-                                        <span class="material-symbols-outlined text-primary">package_2</span>
-                                    </div>
-                                    <p class="text-xs text-on-surface-variant mb-3">e.g. Shoe Box, Laptop, Winter Jacket, Small Appliances</p>
-                                    <div class="text-xs space-y-1 text-on-surface-variant">
-                                        <div><strong>Max Weight:</strong> Up to 5 kg</div>
-                                        <div><strong>Dimensions:</strong> 35 x 25 x 15 cm</div>
-                                    </div>
-                                </div>
-                                <div class="mt-4 pt-3 border-t border-outline-variant/50 text-right">
-                                    <span class="text-xs text-on-surface-variant">Est. From</span>
-                                    <div class="text-lg font-bold text-primary">R 150.00</div>
-                                </div>
-                            </div>
-                        </label>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <asp:Repeater ID="rptParcelSizes" runat="server">
+                                <ItemTemplate>
+                                    <label class="cursor-pointer relative block h-full">
+                                        <input type="radio" name="ParcelSizeGroup"
+                                               value='<%# Eval("Code") %>'
+                                               <%# CheckedAttr(Eval("Code")) %>
+                                               class="size-card-input sr-only"
+                                               onchange='<%# "setSize(\"" + Eval("Code") + "\")" %>' />
+                                        <div class="size-card p-4 rounded-xl border border-outline-variant hover:border-primary transition-all h-full flex flex-col justify-between">
+                                            <div>
+                                                <div class="flex justify-between items-center mb-2">
+                                                    <span class="font-bold text-on-surface text-base"><%# Eval("Name") %></span>
+                                                    <span class="material-symbols-outlined text-primary size-card-icon"><%# Eval("Icon") %></span>
+                                                    <span class="material-symbols-outlined text-primary size-card-check" aria-hidden="true">check_circle</span>
+                                                </div>
+                                                <p class="text-xs text-on-surface-variant mb-3"><%# Eval("Examples") %></p>
+                                                <div class="text-xs space-y-1 text-on-surface-variant">
+                                                    <div><strong>Max Weight:</strong> <%# Eval("MaxWeightText") %></div>
+                                                    <div><strong>Dimensions:</strong> <%# Eval("DimensionsText") %></div>
+                                                </div>
+                                            </div>
+                                            <div class="mt-4 pt-3 border-t border-outline-variant/50 text-right">
+                                                <span class="text-xs text-on-surface-variant">Est. from</span>
+                                                <div class="text-lg font-bold text-primary"><%# Eval("FromPriceText") %></div>
+                                            </div>
+                                        </div>
+                                    </label>
+                                </ItemTemplate>
+                            </asp:Repeater>
+                        </div>
+                    </fieldset>
 
-                        <!-- Large -->
-                        <label class="cursor-pointer relative">
-                            <input type="radio" name="ParcelSizeGroup" value="Large" class="size-card-input sr-only" onclick="setSize('Large')" />
-                            <div class="size-card p-4 rounded-xl border border-outline-variant hover:border-primary transition-all h-full flex flex-col justify-between">
-                                <div>
-                                    <div class="flex justify-between items-center mb-2">
-                                        <span class="font-bold text-on-surface text-base">Large</span>
-                                        <span class="material-symbols-outlined text-primary">inventory_2</span>
-                                    </div>
-                                    <p class="text-xs text-on-surface-variant mb-3">e.g. Microwave, Heavy Boots, Multi-item Orders</p>
-                                    <div class="text-xs space-y-1 text-on-surface-variant">
-                                        <div><strong>Max Weight:</strong> Up to 15 kg</div>
-                                        <div><strong>Dimensions:</strong> 50 x 40 x 30 cm</div>
-                                    </div>
-                                </div>
-                                <div class="mt-4 pt-3 border-t border-outline-variant/50 text-right">
-                                    <span class="text-xs text-on-surface-variant">Est. From</span>
-                                    <div class="text-lg font-bold text-primary">R 250.00</div>
-                                </div>
-                            </div>
-                        </label>
-
-                        <!-- Extra Large -->
-                        <label class="cursor-pointer relative">
-                            <input type="radio" name="ParcelSizeGroup" value="XLarge" class="size-card-input sr-only" onclick="setSize('XLarge')" />
-                            <div class="size-card p-4 rounded-xl border border-outline-variant hover:border-primary transition-all h-full flex flex-col justify-between">
-                                <div>
-                                    <div class="flex justify-between items-center mb-2">
-                                        <span class="font-bold text-on-surface text-base">Extra Large</span>
-                                        <span class="material-symbols-outlined text-primary">package</span>
-                                    </div>
-                                    <p class="text-xs text-on-surface-variant mb-3">e.g. Luggage Bag, Large TV Box, Bulky Equipment</p>
-                                    <div class="text-xs space-y-1 text-on-surface-variant">
-                                        <div><strong>Max Weight:</strong> Up to 30 kg</div>
-                                        <div><strong>Dimensions:</strong> 70 x 50 x 40 cm</div>
-                                    </div>
-                                </div>
-                                <div class="mt-4 pt-3 border-t border-outline-variant/50 text-right">
-                                    <span class="text-xs text-on-surface-variant">Est. From</span>
-                                    <div class="text-lg font-bold text-primary">R 380.00</div>
-                                </div>
-                            </div>
-                        </label>
-
-                    </div>
+                    <p class="text-xs text-on-surface-variant mt-3 mb-8">
+                        From-prices shown are for a local delivery. Your final price depends on the
+                        collection and delivery cities, and is confirmed at step 3.
+                    </p>
 
                     <div class="flex justify-end">
                         <asp:Button ID="btnNextAddress" runat="server" Text="Next: Addresses →" OnClick="btnNextAddress_Click" CssClass="fcl-btn" />
@@ -345,17 +312,21 @@
         </div>
 
         <!-- Parcel & Service Details Table -->
-        <div class="grid grid-cols-3 gap-3 text-xs text-on-surface mb-6">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs text-on-surface mb-6">
             <div class="p-2 border border-outline-variant rounded">
                 <span class="text-[10px] font-semibold text-on-surface-variant block">Parcel Category</span>
                 <asp:Label ID="lblWaybillSize" runat="server" Font-Bold="true" CssClass="text-on-surface" />
             </div>
             <div class="p-2 border border-outline-variant rounded">
-                <span class="text-[10px] font-semibold text-on-surface-variant block">Payment Status</span>
-                <span class="font-bold text-emerald-700 uppercase">Paid / Confirmed</span>
+                <span class="text-[10px] font-semibold text-on-surface-variant block">Dimensions</span>
+                <asp:Label ID="lblWaybillDimensions" runat="server" Font-Bold="true" CssClass="text-on-surface" />
             </div>
             <div class="p-2 border border-outline-variant rounded">
-                <span class="text-[10px] font-semibold text-on-surface-variant block">Amount Paid</span>
+                <span class="text-[10px] font-semibold text-on-surface-variant block">Payment Status</span>
+                <span class="font-bold text-amber-600 uppercase">Invoiced &ndash; Unpaid</span>
+            </div>
+            <div class="p-2 border border-outline-variant rounded">
+                <span class="text-[10px] font-semibold text-on-surface-variant block">Amount Due</span>
                 <asp:Label ID="lblWaybillAmount" runat="server" Font-Bold="true" CssClass="text-on-surface" />
             </div>
         </div>

@@ -42,7 +42,11 @@
                 </thead>
                 <tbody>
                     <tr class="border-b border-outline-variant">
-                        <td class="py-3"><asp:Literal ID="litDesc" runat="server"></asp:Literal></td>
+                        <td class="py-3">
+                            <asp:Literal ID="litDesc" runat="server"></asp:Literal>
+                            <span class="block text-xs text-on-surface-variant mt-1">
+                                <asp:Literal ID="litParcelSpec" runat="server"></asp:Literal></span>
+                        </td>
                         <td class="py-3"><asp:Literal ID="litWaybill" runat="server"></asp:Literal></td>
                         <td class="py-3 text-right">R <asp:Literal ID="litAmount" runat="server"></asp:Literal></td>
                     </tr>

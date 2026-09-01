@@ -49,9 +49,12 @@ namespace ForteLogisticsApp.CustomerPortal
         protected Label lblSummaryDelivery;
         protected Label lblSummaryTotal;
 
+        protected Repeater rptParcelSizes;
+
         protected Label lblWaybillTracking;
         protected Label lblWaybillDate;
         protected Label lblWaybillSize;
+        protected Label lblWaybillDimensions;
         protected Label lblWaybillAmount;
         protected Label lblWaybillSenderName;
         protected Label lblWaybillReceiverName;
@@ -62,22 +65,20 @@ namespace ForteLogisticsApp.CustomerPortal
         protected Label lblWaybillDeliveryCity;
         protected Label lblWaybillDeliveryPostal;
 
+        /// <summary>The band the customer picked in step 1; never null.</summary>
+        private ParcelSize SelectedSize
+        {
+            get { return ParcelSize.Find(hfSelectedSize.Value); }
+        }
+
         /// <summary>
-        /// Billed weight for each size band, taken from the maximum weight advertised on
-        /// the size cards in step 1.
+        /// Billed weight is the band maximum, so the price quoted on the card in step 1 is
+        /// exactly the price the band costs. There is no separate entered weight to drift
+        /// from it.
         /// </summary>
         private decimal BilledWeight
         {
-            get
-            {
-                switch (hfSelectedSize.Value)
-                {
-                    case "Medium": return 5m;
-                    case "Large": return 15m;
-                    case "XLarge": return 30m;
-                    default: return 2m;
-                }
-            }
+            get { return SelectedSize.MaxWeightKg; }
         }
 
         private decimal Quote
@@ -89,9 +90,30 @@ namespace ForteLogisticsApp.CustomerPortal
             }
         }
 
+        /// <summary>
+        /// Emits the checked attribute for the band currently held in the hidden field.
+        ///
+        /// The radios are plain HTML inputs, so their checked state is not carried in
+        /// ViewState. Without this, returning from step 2 always re-rendered Small as
+        /// selected while the hidden field still said Large, and the card disagreed with
+        /// the order summary.
+        /// </summary>
+        protected string CheckedAttr(object code)
+        {
+            return string.Equals(Convert.ToString(code), SelectedSize.Code, StringComparison.OrdinalIgnoreCase)
+                ? "checked=\"checked\""
+                : string.Empty;
+        }
+
         protected void Page_Load(object sender, EventArgs e)
         {
             RequireRole("Customer");
+
+            // Bound on every request, not just the first: the cards are plain HTML radios
+            // whose checked state lives in the hidden field rather than ViewState, so the
+            // highlight is re-derived each time the step is rendered.
+            rptParcelSizes.DataSource = ParcelSize.All;
+            rptParcelSizes.DataBind();
 
             if (!IsPostBack)
             {
@@ -120,7 +142,8 @@ namespace ForteLogisticsApp.CustomerPortal
 
         protected void btnNextPayment_Click(object sender, EventArgs e)
         {
-            lblSummarySize.Text = hfSelectedSize.Value + " (up to " + BilledWeight.ToString("0.##") + " kg)";
+            lblSummarySize.Text = SelectedSize.Name + " (" + SelectedSize.MaxWeightText.ToLowerInvariant() +
+                                  ", " + SelectedSize.DimensionsText + ")";
             lblSummaryPickup.Text = ddlPickupCity.SelectedValue;
             lblSummaryDelivery.Text = ddlDeliveryCity.SelectedValue;
             lblSummaryTotal.Text = "R " + Quote.ToString("N2");
@@ -154,12 +177,16 @@ namespace ForteLogisticsApp.CustomerPortal
             string pickupAddress = Join(txtPickupStreet.Text, ddlPickupCity.SelectedValue, txtPickupPostal.Text);
             string deliveryAddress = Join(txtDeliveryStreet.Text, ddlDeliveryCity.SelectedValue, txtDeliveryPostal.Text);
 
+            ParcelSize size = SelectedSize;
+
             int shipmentId = Db.Insert(
                 @"INSERT INTO dbo.[Shipment]
                     (TrackingNumber, Barcode, SenderID, ReceiverName, ReceiverPhone,
                      PickupAddress, DeliveryAddress, OriginCity, DestCity, ParcelWeight,
+                     ParcelLengthCm, ParcelWidthCm, ParcelHeightCm,
                      ParcelDescription, Cost, DeliveryStatus, WarehouseStatus, LastStatusChange)
-                  VALUES (@t, @t, @s, @rn, @rp, @pu, @da, @o, @d, @w, @desc, @c,
+                  VALUES (@t, @t, @s, @rn, @rp, @pu, @da, @o, @d, @w,
+                          @len, @wid, @hgt, @desc, @c,
                           'Registered', 'Pending', GETDATE())",
                 "@t", trackingNumber,
                 "@s", UserId,
@@ -169,7 +196,10 @@ namespace ForteLogisticsApp.CustomerPortal
                 "@da", deliveryAddress,
                 "@o", ddlPickupCity.SelectedValue,
                 "@d", ddlDeliveryCity.SelectedValue,
-                "@w", BilledWeight,
+                "@w", size.MaxWeightKg,
+                "@len", size.LengthCm,
+                "@wid", size.WidthCm,
+                "@hgt", size.HeightCm,
                 "@desc", txtDescription.Text.Trim(),
                 "@c", cost);
 
@@ -194,7 +224,8 @@ namespace ForteLogisticsApp.CustomerPortal
 
             lblWaybillTracking.Text = trackingNumber;
             lblWaybillDate.Text = DateTime.Now.ToString("dd MMM yyyy, HH:mm");
-            lblWaybillSize.Text = hfSelectedSize.Value;
+            lblWaybillSize.Text = size.Name + " (" + size.MaxWeightText.ToLowerInvariant() + ")";
+            lblWaybillDimensions.Text = size.DimensionsText;
             lblWaybillAmount.Text = "R " + cost.ToString("N2");
             lblWaybillSenderName.Text = FullName;
             lblWaybillReceiverName.Text = txtReceiver.Text.Trim();

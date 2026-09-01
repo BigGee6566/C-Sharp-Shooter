@@ -61,12 +61,47 @@ namespace ForteLogisticsApp.Data
         /// True for the self-guarded upgrade batches at the bottom of Schema.sql. Each one
         /// tests for its own object first, so replaying it on every startup is a no-op once
         /// the change has been applied.
+        ///
+        /// Leading comments are stripped before the test. The script splits on GO, so the
+        /// comment that documents a batch lands at the *start* of that batch - and matching
+        /// "^IF" against the raw text silently skipped every batch that carried one. That
+        /// affected most of the upgrade section, so a database brought forward by the app
+        /// rather than by running Schema.sql by hand never received those columns.
         /// </summary>
         private static bool IsUpgradeBatch(string batch)
         {
-            return Regex.IsMatch(batch,
+            string body = StripLeadingComments(batch);
+
+            return Regex.IsMatch(body,
                 @"^\s*IF\s+(COL_LENGTH|OBJECT_ID|NOT\s+EXISTS\s*\(\s*SELECT\s+1\s+FROM\s+sys\.indexes)",
                 RegexOptions.IgnoreCase);
+        }
+
+        /// <summary>Removes any run of leading /* block */ and -- line comments.</summary>
+        private static string StripLeadingComments(string batch)
+        {
+            string body = (batch ?? string.Empty).TrimStart();
+
+            while (true)
+            {
+                if (body.StartsWith("/*"))
+                {
+                    int close = body.IndexOf("*/", System.StringComparison.Ordinal);
+                    if (close < 0) break;
+                    body = body.Substring(close + 2).TrimStart();
+                }
+                else if (body.StartsWith("--"))
+                {
+                    int eol = body.IndexOfAny(new[] { '\r', '\n' });
+                    if (eol < 0) break;
+                    body = body.Substring(eol).TrimStart();
+                }
+                else
+                {
+                    break;
+                }
+            }
+            return body;
         }
 
         private static bool UserTableExists()

@@ -129,6 +129,7 @@
     <Compile Include="Services\AuthService.cs" />
     <Compile Include="Services\AutomationService.cs" />
     <Compile Include="Services\CourierService.cs" />
+    <Compile Include="Services\ParcelSize.cs" />
     <Compile Include="Services\NotificationService.cs" />
     <Compile Include="Services\SortingService.cs" />
     <Compile Include="Services\UiHelper.cs" />

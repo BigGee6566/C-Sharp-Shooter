@@ -280,6 +280,24 @@ IF COL_LENGTH('dbo.Shipment', 'LastStatusChange') IS NULL
     ALTER TABLE dbo.[Shipment] ADD LastStatusChange DATETIME NULL;
 GO
 
+/* Parcel dimensions for the size band chosen at booking, printed on the waybill and the
+   invoice so the record shows what was actually shipped.
+
+   Nullable on purpose: a shipment registered at the Ops counter is captured from a
+   free-text weight with no size band, so it legitimately has no dimensions. Every screen
+   that displays these renders an em dash when they are absent. */
+IF COL_LENGTH('dbo.Shipment', 'ParcelLengthCm') IS NULL
+    ALTER TABLE dbo.[Shipment] ADD ParcelLengthCm DECIMAL(6,1) NULL;
+GO
+
+IF COL_LENGTH('dbo.Shipment', 'ParcelWidthCm') IS NULL
+    ALTER TABLE dbo.[Shipment] ADD ParcelWidthCm DECIMAL(6,1) NULL;
+GO
+
+IF COL_LENGTH('dbo.Shipment', 'ParcelHeightCm') IS NULL
+    ALTER TABLE dbo.[Shipment] ADD ParcelHeightCm DECIMAL(6,1) NULL;
+GO
+
 IF COL_LENGTH('dbo.Route', 'CompletedDate') IS NULL
     ALTER TABLE dbo.[Route] ADD CompletedDate DATETIME NULL;
 GO

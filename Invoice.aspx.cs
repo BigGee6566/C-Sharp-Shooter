@@ -11,7 +11,7 @@ namespace ForteLogisticsApp
     {
         protected Panel pnlInvoice, pnlNotFound;
         protected Literal litInvoiceNo, litDate, litClient, litClientEmail, litStatus,
-                          litDesc, litWaybill, litAmount, litSubtotal, litTotal;
+                          litDesc, litWaybill, litParcelSpec, litAmount, litSubtotal, litTotal;
 
         protected void Page_Load(object sender, EventArgs e)
         {
@@ -25,6 +25,7 @@ namespace ForteLogisticsApp
             DataTable dt = Db.Query(
                 @"SELECT p.InvoiceNumber, p.Amount, p.PaymentStatus, p.IssuedDate, p.ClientID,
                          s.TrackingNumber, s.ParcelDescription, s.OriginCity, s.DestCity,
+                         s.ParcelWeight, s.ParcelLengthCm, s.ParcelWidthCm, s.ParcelHeightCm,
                          u.FullName, u.Email
                   FROM dbo.[Payment] p
                   LEFT JOIN dbo.[Shipment] s ON s.ShipmentID = p.ShipmentID
@@ -47,6 +48,13 @@ namespace ForteLogisticsApp
             if (desc.Length == 0) desc = "Courier delivery service";
             litDesc.Text = Server.HtmlEncode(desc + " (" + Db.ToStr(r["OriginCity"]) + " to " + Db.ToStr(r["DestCity"]) + ")");
             litWaybill.Text = Server.HtmlEncode(Db.ToStr(r["TrackingNumber"]));
+
+            // Parcel measurements, so the invoice records what was actually carried.
+            // Counter-registered shipments have a weight but no size band, so Describe()
+            // returns a dash for them rather than a half-empty measurement.
+            litParcelSpec.Text = Server.HtmlEncode(
+                Db.ToDecimal(r["ParcelWeight"]).ToString("0.##") + " kg · " +
+                ParcelSize.Describe(r["ParcelLengthCm"], r["ParcelWidthCm"], r["ParcelHeightCm"]));
 
             decimal amount = Db.ToDecimal(r["Amount"]);
             litAmount.Text = amount.ToString("N2");

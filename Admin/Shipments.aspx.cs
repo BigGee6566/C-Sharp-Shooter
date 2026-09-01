@@ -14,7 +14,7 @@ namespace ForteLogisticsApp.AdminPortal
         protected Button btnSearch;
         protected Repeater rptShipments, rptTimeline;
         protected Literal litWaybill, litDelStatus, litWhStatus, litException,
-                          litSender, litReceiver, litPickup, litDelivery, litRoute, litWeight,
+                          litSender, litReceiver, litPickup, litDelivery, litRoute, litWeight, litDimensions,
                           litDesc, litSort, litDriver, litRouteName, litVehicle, litCost, litShipDate,
                           litDelDate, litBarcode, litPayment;
 
@@ -106,6 +106,9 @@ namespace ForteLogisticsApp.AdminPortal
             litDelivery.Text = Enc(Db.ToStr(r0["DeliveryAddress"]), "-");
             litRoute.Text = Server.HtmlEncode(Db.ToStr(r0["OriginCity"]) + " → " + Db.ToStr(r0["DestCity"]));
             litWeight.Text = Db.ToDecimal(r0["ParcelWeight"]).ToString("0.##") + " kg";
+            // Shows a dash for counter-registered shipments, which have no size band.
+            litDimensions.Text = ParcelSize.Describe(
+                r0["ParcelLengthCm"], r0["ParcelWidthCm"], r0["ParcelHeightCm"]);
             litDesc.Text = Enc(Db.ToStr(r0["ParcelDescription"]), "-");
             litSort.Text = Enc(Db.ToStr(r0["SortCategory"]), "-");
             litDriver.Text = Enc(Db.ToStr(r0["DriverName"]), "Unassigned");

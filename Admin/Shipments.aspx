@@ -67,6 +67,7 @@
                         <div><dt class="text-xs uppercase text-on-surface-variant">Delivery Address</dt><dd class="text-on-surface"><asp:Literal ID="litDelivery" runat="server"></asp:Literal></dd></div>
                         <div><dt class="text-xs uppercase text-on-surface-variant">Route</dt><dd class="text-on-surface"><asp:Literal ID="litRoute" runat="server"></asp:Literal></dd></div>
                         <div><dt class="text-xs uppercase text-on-surface-variant">Weight</dt><dd class="text-on-surface"><asp:Literal ID="litWeight" runat="server"></asp:Literal></dd></div>
+                        <div><dt class="text-xs uppercase text-on-surface-variant">Dimensions</dt><dd class="text-on-surface"><asp:Literal ID="litDimensions" runat="server"></asp:Literal></dd></div>
                         <div><dt class="text-xs uppercase text-on-surface-variant">Description</dt><dd class="text-on-surface"><asp:Literal ID="litDesc" runat="server"></asp:Literal></dd></div>
                         <div><dt class="text-xs uppercase text-on-surface-variant">Sort Category</dt><dd class="text-on-surface"><asp:Literal ID="litSort" runat="server"></asp:Literal></dd></div>
                         <div><dt class="text-xs uppercase text-on-surface-variant">Driver</dt><dd class="font-semibold text-brandDark"><asp:Literal ID="litDriver" runat="server"></asp:Literal></dd></div>
