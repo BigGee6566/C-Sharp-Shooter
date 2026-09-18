@@ -93,6 +93,30 @@ namespace ForteLogisticsApp.DriverPortal
         {
             if (!int.TryParse(hfShipmentId.Value, out int shipId)) return;
 
+            // Re-check ownership and status at the write itself, not only when the parcel was
+            // scanned into hfShipmentId - a stale postback (or a second driver's browser tab)
+            // must not be able to confirm a delivery for a parcel it no longer owns, or one
+            // already finalised.
+            DataTable current = Db.Query(
+                "SELECT DriverID, DeliveryStatus FROM dbo.[Shipment] WHERE ShipmentID = @s", "@s", shipId);
+            if (current.Rows.Count == 0 ||
+                current.Rows[0]["DriverID"] == DBNull.Value ||
+                Db.ToInt(current.Rows[0]["DriverID"]) != UserId)
+            {
+                pnlConfirm.Visible = false;
+                lblScanMsg.CssClass = UiHelper.AlertClass("error") + " mt-2";
+                lblScanMsg.Text = "This parcel is not assigned to you.";
+                return;
+            }
+            string currentStatus = Db.ToStr(current.Rows[0]["DeliveryStatus"]);
+            if (currentStatus != "OutForDelivery")
+            {
+                pnlConfirm.Visible = false;
+                lblScanMsg.CssClass = UiHelper.AlertClass("warning") + " mt-2";
+                lblScanMsg.Text = "This parcel is no longer awaiting delivery confirmation.";
+                return;
+            }
+
             string outcome = ddlOutcome.SelectedValue;
             bool delivered = outcome == "Delivered";
             string receivedBy = txtReceivedBy.Text.Trim();

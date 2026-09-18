@@ -108,11 +108,15 @@ namespace ForteLogisticsApp.Ops
         private void LoadParcels()
         {
             string lane = ddlFilterCategory.SelectedValue ?? string.Empty;
+            // Belt-and-braces alongside Warehouse's own gate: a parcel can only reach
+            // WarehouseStatus = 'Sorted' once it is cleared for payment, but dispatch is the
+            // point of no return, so it is re-checked here as well.
             DataTable dt = Db.Query(
                 @"SELECT ShipmentID, TrackingNumber, DestCity, SortCategory
                   FROM dbo.[Shipment]
                   WHERE RouteID IS NULL AND WarehouseStatus = 'Sorted'
                     AND DeliveryStatus NOT IN ('Delivered','Failed')
+                    AND PaymentGateStatus IN ('NotRequired','PaymentSuccessful')
                     AND (@lane = '' OR SortCategory = @lane)
                   ORDER BY ShipmentDate", "@lane", lane);
             cblParcels.Items.Clear();
@@ -203,10 +207,21 @@ namespace ForteLogisticsApp.Ops
             int? vehicleId = route.Rows[0]["VehicleID"] == DBNull.Value ? (int?)null : Db.ToInt(route.Rows[0]["VehicleID"]);
 
             int assigned = 0;
+            int blocked = 0;
             foreach (ListItem item in cblParcels.Items)
             {
                 if (!item.Selected) continue;
                 int shipId = int.Parse(item.Value);
+
+                // Re-verify at the write itself - the posted checkbox value is not trusted
+                // just because the list was filtered when it was rendered.
+                string gateStatus = Db.ToStr(Db.Scalar(
+                    "SELECT PaymentGateStatus FROM dbo.[Shipment] WHERE ShipmentID = @s", "@s", shipId));
+                if (gateStatus != "NotRequired" && gateStatus != "PaymentSuccessful")
+                {
+                    blocked++;
+                    continue;
+                }
 
                 // Assigned to a driver, awaiting collection (not yet in the driver's hands).
                 Db.NonQuery(
@@ -234,7 +249,12 @@ namespace ForteLogisticsApp.Ops
             }
 
             lblAssignMsg.CssClass = UiHelper.AlertClass(assigned > 0) + " mt-1";
-            lblAssignMsg.Text = assigned > 0 ? assigned + " parcel(s) assigned to the driver for collection." : "Select at least one parcel to assign.";
+            lblAssignMsg.Text = assigned > 0
+                ? assigned + " parcel(s) assigned to the driver for collection." +
+                  (blocked > 0 ? " " + blocked + " skipped - awaiting customer payment." : "")
+                : (blocked > 0
+                    ? blocked + " parcel(s) are awaiting customer payment and were not assigned."
+                    : "Select at least one parcel to assign.");
             LoadParcels();
             LoadRoutesTable();
         }

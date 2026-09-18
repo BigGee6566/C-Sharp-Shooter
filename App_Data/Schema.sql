@@ -377,3 +377,96 @@ IF NOT EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'CK_User_Role')
 ALTER TABLE dbo.[User] ADD CONSTRAINT CK_User_Role
     CHECK (Role IN ('Customer', 'Staff', 'Admin'));
 GO
+
+/* ============================================================
+   Payment-before-dispatch gate (Individual customers).
+
+   PaymentGateStatus lives on Shipment, separate from DeliveryStatus/WarehouseStatus,
+   so "has this parcel cleared payment" is never conflated with "where is it in the
+   warehouse/route pipeline". Values: NotRequired, PaymentRequired, PaymentPending,
+   PaymentSuccessful. Counter-registered and Business-client shipments default to
+   NotRequired (Business is invoiced, not gated); online Individual bookings are set to
+   PaymentRequired by the booking code. Warehouse/RoutePlanning only admit shipments whose
+   PaymentGateStatus is NotRequired or PaymentSuccessful - see Ops\Warehouse.aspx.cs and
+   Ops\RoutePlanning.aspx.cs.
+   ============================================================ */
+IF COL_LENGTH('dbo.Shipment', 'PaymentGateStatus') IS NULL
+    ALTER TABLE dbo.[Shipment] ADD PaymentGateStatus NVARCHAR(20) NOT NULL DEFAULT 'NotRequired';
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'CK_Shipment_PaymentGateStatus')
+ALTER TABLE dbo.[Shipment] ADD CONSTRAINT CK_Shipment_PaymentGateStatus
+    CHECK (PaymentGateStatus IN ('NotRequired', 'PaymentRequired', 'PaymentPending', 'PaymentSuccessful'));
+GO
+
+/* Duplicate-payment-submission guard: a client-generated idempotency key (one per payment
+   attempt/click) makes a resubmitted or duplicated request a no-op instead of a second
+   charge. Nullable + filtered unique index so historical rows (no key) are unaffected. */
+IF COL_LENGTH('dbo.Payment', 'IdempotencyKey') IS NULL
+    ALTER TABLE dbo.[Payment] ADD IdempotencyKey NVARCHAR(100) NULL;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes
+               WHERE name = 'UX_Payment_IdempotencyKey' AND object_id = OBJECT_ID('dbo.Payment'))
+CREATE UNIQUE INDEX UX_Payment_IdempotencyKey
+    ON dbo.[Payment](IdempotencyKey) WHERE IdempotencyKey IS NOT NULL;
+GO
+
+/* PaymentMethod recorded by the sandbox gateway; PaymentStatus gains Pending/Failed so a
+   declined or in-flight sandbox charge is distinguishable from a genuinely unpaid invoice. */
+IF NOT EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'CK_Payment_PaymentStatus')
+ALTER TABLE dbo.[Payment] ADD CONSTRAINT CK_Payment_PaymentStatus
+    CHECK (PaymentStatus IN ('Unpaid', 'Pending', 'Paid', 'Failed', 'Cancelled'));
+GO
+
+/* Business billing: groups Client rows that share and jointly pay each other's invoices.
+   A Business (Client.ClientType = 'Business') is not itself gated by PaymentGateStatus -
+   see comment above - it settles via Finance\Invoices.aspx / Customer\Invoices.aspx instead. */
+IF OBJECT_ID('dbo.Business', 'U') IS NULL
+CREATE TABLE dbo.Business (
+    BusinessID   INT IDENTITY(1,1) PRIMARY KEY,
+    BusinessName NVARCHAR(150) NOT NULL,
+    RegNumber    NVARCHAR(50)  NULL,
+    CreatedDate  DATETIME NOT NULL DEFAULT GETDATE()
+);
+GO
+
+IF COL_LENGTH('dbo.Client', 'BusinessID') IS NULL
+    ALTER TABLE dbo.[Client] ADD BusinessID INT NULL REFERENCES dbo.Business(BusinessID);
+GO
+
+/* Records which invoices a single bulk-payment submission settled, and how much of each -
+   the join needed to allocate one payment across several selected invoices safely. */
+IF OBJECT_ID('dbo.PaymentAllocation', 'U') IS NULL
+CREATE TABLE dbo.PaymentAllocation (
+    AllocationID   INT IDENTITY(1,1) PRIMARY KEY,
+    PaymentID      INT NOT NULL REFERENCES dbo.[Payment](PaymentID),
+    AmountApplied  DECIMAL(10,2) NOT NULL,
+    AppliedBy      INT NOT NULL REFERENCES dbo.[User](UserID),
+    AppliedDate    DATETIME NOT NULL DEFAULT GETDATE(),
+    BatchKey       NVARCHAR(100) NULL   -- ties every allocation in one bulk-pay submission together
+);
+GO
+
+/* General-purpose audit trail for manual actions that need a record beyond TrackingHistory
+   (bulk invoice payments, route/service-area overrides). */
+IF OBJECT_ID('dbo.AuditLog', 'U') IS NULL
+CREATE TABLE dbo.AuditLog (
+    AuditID     INT IDENTITY(1,1) PRIMARY KEY,
+    UserID      INT NULL REFERENCES dbo.[User](UserID),
+    Action      NVARCHAR(60)   NOT NULL,
+    Entity      NVARCHAR(60)   NOT NULL,
+    EntityID    NVARCHAR(60)   NULL,
+    Details     NVARCHAR(1000) NULL,
+    CreatedDate DATETIME NOT NULL DEFAULT GETDATE()
+);
+GO
+
+/* Existing rows: counter/walk-in and any already-Delivered/InTransit/Assigned shipment
+   have obviously already cleared dispatch, so backfill them to NotRequired rather than
+   retroactively blocking history. Only a brand-new online booking is gated going forward. */
+UPDATE dbo.[Shipment]
+   SET PaymentGateStatus = 'NotRequired'
+ WHERE PaymentGateStatus = 'PaymentRequired'
+   AND DeliveryStatus <> 'Registered';
+GO

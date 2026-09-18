@@ -64,11 +64,16 @@ namespace ForteLogisticsApp.Ops
 
             // Both filters are optional; a NULL/empty parameter disables its own clause so
             // the whole thing stays one parameterised statement.
+            // A shipment still awaiting/mid online payment must not enter the sorting queue -
+            // Individual customers pay before dispatch, and this is the queue that feeds
+            // dispatch (see RoutePlanning). NotRequired (Business/counter) and
+            // PaymentSuccessful are the only states eligible to be sorted.
             DataTable queue = Db.Query(
                 @"SELECT ShipmentID, TrackingNumber, OriginCity, DestCity,
                          SortCategory, WarehouseStatus, ExceptionType
                   FROM dbo.[Shipment]
                   WHERE WarehouseStatus IN ('Pending','Received','Sorted')
+                    AND PaymentGateStatus IN ('NotRequired','PaymentSuccessful')
                     AND (@q = '' OR TrackingNumber LIKE '%' + @q + '%' OR DestCity LIKE '%' + @q + '%')
                     AND (@lane = '' OR SortCategory = @lane)
                   ORDER BY ShipmentDate DESC",
@@ -109,7 +114,7 @@ namespace ForteLogisticsApp.Ops
         {
             DataTable dt = Db.Query(
                 @"SELECT ShipmentID, TrackingNumber, OriginCity, DestCity, ParcelWeight,
-                         SortCategory, WarehouseStatus, ExceptionType
+                         SortCategory, WarehouseStatus, ExceptionType, PaymentGateStatus
                   FROM dbo.[Shipment] WHERE TrackingNumber = @t", "@t", trackingNumber);
 
             if (dt.Rows.Count == 0)
@@ -121,6 +126,15 @@ namespace ForteLogisticsApp.Ops
             }
 
             DataRow row = dt.Rows[0];
+
+            string paymentGateStatus = Db.ToStr(row["PaymentGateStatus"]);
+            if (paymentGateStatus != "NotRequired" && paymentGateStatus != "PaymentSuccessful")
+            {
+                pnlEdit.Visible = false;
+                lblScanMsg.CssClass = UiHelper.AlertClass("error") + " mt-2";
+                lblScanMsg.Text = "This parcel is awaiting customer payment and cannot be sorted yet.";
+                return;
+            }
             hfShipmentId.Value = Db.ToStr(row["ShipmentID"]);
             litParcel.Text = Server.HtmlEncode(Db.ToStr(row["TrackingNumber"]));
 
@@ -154,6 +168,19 @@ namespace ForteLogisticsApp.Ops
         {
             int shipmentId;
             if (!int.TryParse(hfShipmentId.Value, out shipmentId)) return;
+
+            // Re-check payment eligibility at the actual write, not just when the parcel was
+            // scanned - the hidden field could otherwise carry a shipment that was still
+            // unpaid when the page was first loaded and must not be walked forward on save.
+            string gateStatus = Db.ToStr(Db.Scalar(
+                "SELECT PaymentGateStatus FROM dbo.[Shipment] WHERE ShipmentID = @s", "@s", shipmentId));
+            if (gateStatus != "NotRequired" && gateStatus != "PaymentSuccessful")
+            {
+                lblSaveMsg.CssClass = UiHelper.AlertClass("error") + " mt-1";
+                lblSaveMsg.Text = "This parcel is awaiting customer payment and cannot be sorted yet.";
+                LoadQueue();
+                return;
+            }
 
             string warehouseStatus = ddlWarehouse.SelectedValue;
             string exceptionType = ddlException.SelectedValue;

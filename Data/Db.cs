@@ -57,14 +57,48 @@ namespace ForteLogisticsApp.Data
 
         private static SqlCommand CreateCommand(SqlConnection conn, string sql, object[] pairs)
         {
+            return CreateCommand(conn, null, sql, pairs);
+        }
+
+        private static SqlCommand CreateCommand(SqlConnection conn, SqlTransaction tx, string sql, object[] pairs)
+        {
             if (string.IsNullOrEmpty(sql))
                 throw new ArgumentException("SQL command text may not be empty.");
 
-            var cmd = new SqlCommand(sql, conn);
+            var cmd = new SqlCommand(sql, conn, tx);
             cmd.CommandType = CommandType.Text;
             cmd.CommandTimeout = 30;
             AddParams(cmd, pairs);
             return cmd;
+        }
+
+        /// <summary>
+        /// Runs <paramref name="work"/> against one open connection inside one transaction,
+        /// committing on success and rolling back on any exception. Use the (conn, tx)
+        /// overloads of Query/NonQuery/Scalar/Insert inside <paramref name="work"/> so every
+        /// statement shares the same transaction - a multi-step write (e.g. a payment that
+        /// updates Payment, Shipment and TrackingHistory together) must never leave the
+        /// database half-updated if a later step fails.
+        /// </summary>
+        public static void RunInTransaction(Action<SqlConnection, SqlTransaction> work)
+        {
+            using (var conn = GetConnection())
+            {
+                conn.Open();
+                using (var tx = conn.BeginTransaction())
+                {
+                    try
+                    {
+                        work(conn, tx);
+                        tx.Commit();
+                    }
+                    catch
+                    {
+                        tx.Rollback();
+                        throw;
+                    }
+                }
+            }
         }
 
         /// <summary>Runs a SELECT and returns a DataTable. Params passed as name,value,name,value...</summary>
@@ -108,6 +142,45 @@ namespace ForteLogisticsApp.Data
         public static int Insert(string sql, params object[] pairs)
         {
             var result = Scalar(sql + "; SELECT CAST(SCOPE_IDENTITY() AS INT);", pairs);
+            return (result == null || result == DBNull.Value) ? 0 : Convert.ToInt32(result);
+        }
+
+        /// <summary>Transaction-bound SELECT - see <see cref="RunInTransaction"/>.</summary>
+        public static DataTable Query(SqlConnection conn, SqlTransaction tx, string sql, params object[] pairs)
+        {
+            using (var cmd = CreateCommand(conn, tx, sql, pairs))
+            {
+                var dt = new DataTable();
+                using (var da = new SqlDataAdapter(cmd))
+                {
+                    da.Fill(dt);
+                }
+                return dt;
+            }
+        }
+
+        /// <summary>Transaction-bound INSERT/UPDATE/DELETE - see <see cref="RunInTransaction"/>.</summary>
+        public static int NonQuery(SqlConnection conn, SqlTransaction tx, string sql, params object[] pairs)
+        {
+            using (var cmd = CreateCommand(conn, tx, sql, pairs))
+            {
+                return cmd.ExecuteNonQuery();
+            }
+        }
+
+        /// <summary>Transaction-bound scalar query - see <see cref="RunInTransaction"/>.</summary>
+        public static object Scalar(SqlConnection conn, SqlTransaction tx, string sql, params object[] pairs)
+        {
+            using (var cmd = CreateCommand(conn, tx, sql, pairs))
+            {
+                return cmd.ExecuteScalar();
+            }
+        }
+
+        /// <summary>Transaction-bound INSERT returning the new identity value - see <see cref="RunInTransaction"/>.</summary>
+        public static int Insert(SqlConnection conn, SqlTransaction tx, string sql, params object[] pairs)
+        {
+            var result = Scalar(conn, tx, sql + "; SELECT CAST(SCOPE_IDENTITY() AS INT);", pairs);
             return (result == null || result == DBNull.Value) ? 0 : Convert.ToInt32(result);
         }
 

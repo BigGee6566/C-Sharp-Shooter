@@ -73,7 +73,7 @@ namespace ForteLogisticsApp.Data
             string body = StripLeadingComments(batch);
 
             return Regex.IsMatch(body,
-                @"^\s*IF\s+(COL_LENGTH|OBJECT_ID|NOT\s+EXISTS\s*\(\s*SELECT\s+1\s+FROM\s+sys\.indexes)",
+                @"^\s*IF\s+(COL_LENGTH|OBJECT_ID|NOT\s+EXISTS\s*\(\s*SELECT\s+1\s+FROM\s+sys\.(indexes|check_constraints))",
                 RegexOptions.IgnoreCase);
         }
 

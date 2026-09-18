@@ -14,8 +14,12 @@ namespace ForteLogisticsApp.CustomerPortal
     /// route - the same calculation the public quote tool on the home page uses, so a
     /// customer is never quoted two different prices for the same shipment.
     ///
-    /// Confirming does not take a card payment: it books the shipment and raises an unpaid
-    /// invoice in dbo.[Payment], which the customer settles under My Invoices.
+    /// Confirming books the shipment and raises an unpaid invoice in dbo.[Payment]. An
+    /// Individual client (Client.ClientType = 'Individual') is then sent straight to
+    /// Customer\Payment.aspx to pay before the parcel is dispatchable - see
+    /// Shipment.PaymentGateStatus and Ops\Warehouse.aspx.cs, which will not admit an unpaid
+    /// Individual shipment into the sorting queue. A Business client is invoiced instead and
+    /// settles later under My Invoices, so their shipment is not gated.
     /// </summary>
     public partial class BookShipment : SecurePage
     {
@@ -179,15 +183,24 @@ namespace ForteLogisticsApp.CustomerPortal
 
             ParcelSize size = SelectedSize;
 
+            // Individual clients must pay before their parcel is dispatchable; Business
+            // clients are invoiced and settle later under My Invoices, so their shipment is
+            // never gated. Client.ClientType is looked up server-side - it is never taken
+            // from the booking form.
+            string clientType = Db.ToStr(Db.Scalar(
+                "SELECT ClientType FROM dbo.[Client] WHERE UserID = @u", "@u", UserId));
+            bool paymentRequired = !string.Equals(clientType, "Business", StringComparison.OrdinalIgnoreCase);
+            string paymentGateStatus = paymentRequired ? "PaymentRequired" : "NotRequired";
+
             int shipmentId = Db.Insert(
                 @"INSERT INTO dbo.[Shipment]
                     (TrackingNumber, Barcode, SenderID, ReceiverName, ReceiverPhone,
                      PickupAddress, DeliveryAddress, OriginCity, DestCity, ParcelWeight,
                      ParcelLengthCm, ParcelWidthCm, ParcelHeightCm,
-                     ParcelDescription, Cost, DeliveryStatus, WarehouseStatus, LastStatusChange)
+                     ParcelDescription, Cost, DeliveryStatus, WarehouseStatus, PaymentGateStatus, LastStatusChange)
                   VALUES (@t, @t, @s, @rn, @rp, @pu, @da, @o, @d, @w,
                           @len, @wid, @hgt, @desc, @c,
-                          'Registered', 'Pending', GETDATE())",
+                          'Registered', 'Pending', @pgs, GETDATE())",
                 "@t", trackingNumber,
                 "@s", UserId,
                 "@rn", txtReceiver.Text.Trim(),
@@ -201,7 +214,8 @@ namespace ForteLogisticsApp.CustomerPortal
                 "@wid", size.WidthCm,
                 "@hgt", size.HeightCm,
                 "@desc", txtDescription.Text.Trim(),
-                "@c", cost);
+                "@c", cost,
+                "@pgs", paymentGateStatus);
 
             Db.NonQuery(
                 @"INSERT INTO dbo.[TrackingHistory] (ShipmentID, Location, Status, Remarks)
@@ -213,6 +227,19 @@ namespace ForteLogisticsApp.CustomerPortal
                 @"INSERT INTO dbo.[Payment] (ClientID, ShipmentID, InvoiceNumber, Amount, PaymentStatus)
                   VALUES (@c, @s, @inv, @a, 'Unpaid')",
                 "@c", UserId, "@s", shipmentId, "@inv", invoiceNumber, "@a", cost);
+
+            if (paymentRequired)
+            {
+                NotificationService.Send(UserId, shipmentId,
+                    "Your collection has been booked. Waybill " + trackingNumber + ". Pay invoice " +
+                    invoiceNumber + " (R " + cost.ToString("F2") + ") now to confirm dispatch.",
+                    "Registration");
+
+                // Individual bookings are not shippable until paid - go straight to payment
+                // rather than showing a waybill that implies the parcel will be collected.
+                Response.Redirect("~/Customer/Payment.aspx?shipmentId=" + shipmentId);
+                return;
+            }
 
             NotificationService.Send(UserId, shipmentId,
                 "Your collection has been booked. Waybill " + trackingNumber + ". Invoice " +

@@ -73,6 +73,15 @@
     <Content Include="App_Data\Schema.sql" />
     <Content Include="Images\logo.jpeg" />
     <Content Include="Images\C SHARP SHOOTER SYSTEM LOGO.jpeg" />
+    <Content Include="Images\NEW LOGO LOGISTICORE.jpg" />
+    <Content Include="Images\logisticore-logo.jpg" />
+    <Content Include="Images\Parcel Collection.jpg" />
+    <Content Include="Images\Warehousing.jpg" />
+    <Content Include="Images\Delivery Services.jpg" />
+    <Content Include="Images\web\logo.png" />
+    <Content Include="Images\web\parcel-collection.jpg" />
+    <Content Include="Images\web\warehousing.jpg" />
+    <Content Include="Images\web\delivery-services.jpg" />
     <Content Include="Login.aspx" />
     <Content Include="Register.aspx" />
     <Content Include="Contact.aspx" />
@@ -83,6 +92,7 @@
     <Content Include="Customer\Dashboard.aspx" />
     <Content Include="Customer\BookShipment.aspx" />
     <Content Include="Customer\Invoices.aspx" />
+    <Content Include="Customer\Payment.aspx" />
     <Content Include="Customer\Track.aspx" />
     <Content Include="Customer\Profile.aspx" />
     <Content Include="Admin\Shipments.aspx" />
@@ -124,8 +134,12 @@
     <Compile Include="Data\Db.cs" />
     <Compile Include="Data\DbInitializer.cs" />
     <Compile Include="Security\PasswordHelper.cs" />
-    <Compile Include="Security\BasePage.cs" />
-    <Compile Include="Security\SecurePage.cs" />
+    <Compile Include="Security\BasePage.cs">
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Security\SecurePage.cs">
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
     <Compile Include="Services\AuthService.cs" />
     <Compile Include="Services\AutomationService.cs" />
     <Compile Include="Services\CourierService.cs" />
@@ -134,6 +148,8 @@
     <Compile Include="Services\SortingService.cs" />
     <Compile Include="Services\UiHelper.cs" />
     <Compile Include="Services\ReportExport.cs" />
+    <Compile Include="Services\PaymentGateway.cs" />
+    <Compile Include="Services\PaymentService.cs" />
     <Compile Include="Login.aspx.cs">
       <DependentUpon>Login.aspx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>
@@ -172,6 +188,10 @@
     </Compile>
     <Compile Include="Customer\Invoices.aspx.cs">
       <DependentUpon>Customer\Invoices.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Customer\Payment.aspx.cs">
+      <DependentUpon>Customer\Payment.aspx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>
     </Compile>
     <Compile Include="Customer\Track.aspx.cs">
