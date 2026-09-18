@@ -29,11 +29,52 @@ namespace ForteLogisticsApp
             get { return Session != null && Session["UserID"] != null; }
         }
 
+        /// <summary>Which shell a page wears.</summary>
+        private enum Chrome
+        {
+            /// <summary>The portal rail, whose grouped role sections cannot render horizontally.</summary>
+            Sidebar,
+            /// <summary>A horizontal bar, for the public marketing pages.</summary>
+            TopNav,
+            /// <summary>No navigation at all, for the focused sign-in and sign-up pages.</summary>
+            Bare
+        }
+
+        private Chrome ChromeMode
+        {
+            get
+            {
+                string page = Request.AppRelativeCurrentExecutionFilePath ?? string.Empty;
+
+                if (Matches(page, "~/Default.aspx") || Matches(page, "~/Contact.aspx"))
+                {
+                    return Chrome.TopNav;
+                }
+                if (Matches(page, "~/Login.aspx") || Matches(page, "~/Register.aspx"))
+                {
+                    return Chrome.Bare;
+                }
+                return Chrome.Sidebar;
+            }
+        }
+
+        private static bool Matches(string page, string path)
+        {
+            return string.Equals(page, path, StringComparison.OrdinalIgnoreCase);
+        }
+
         protected void Page_Load(object sender, EventArgs e)
         {
             // The marketing footer belongs to the public pages only; inside the portal the
-            // sidebar is the chrome and a footer just pushes content around.
-            litFooter.Text = LoggedIn ? string.Empty : BuildFooter();
+            // sidebar is the chrome and a footer just pushes content around. Login and Register
+            // are deliberately bare - a four-column footer under a centred card is noise.
+            litFooter.Text = (LoggedIn || ChromeMode == Chrome.Bare)
+                ? string.Empty
+                : BuildFooter();
+
+            // Which shell to wear is a property of the URL, not of the postback, so it is
+            // decided on every load - the landing page's hero forms do post back.
+            ApplyChromeMode();
 
             if (!IsPostBack)
             {
@@ -41,10 +82,46 @@ namespace ForteLogisticsApp
             }
         }
 
+        /// <summary>Shows the one navigation shell this page wants, and drops the rail's offset with it.</summary>
+        private void ApplyChromeMode()
+        {
+            Chrome mode = ChromeMode;
+
+            sideNav.Visible = mode == Chrome.Sidebar;
+            pnlTopNav.Visible = mode == Chrome.TopNav;
+
+            // The top bar carries its own hamburger, so the separate mobile bar would double up.
+            divMobileBar.Visible = mode == Chrome.Sidebar;
+
+            // min-w-0 defeats the flex item's default min-width:auto. Without it the widest
+            // child stretches the canvas past the viewport, which pushes the top bar's
+            // right-hand cluster - the mobile hamburger included - off screen.
+            mainCanvas.Attributes["class"] = mode == Chrome.Sidebar
+                ? "flex-1 min-w-0 ml-0 md:ml-64 overflow-y-auto relative h-full"
+                : "flex-1 min-w-0 overflow-y-auto relative h-full";
+
+            // Default.aspx and Contact.aspx carry their own max-width and gutters, so the
+            // shell's padding on top of that is a doubled gutter.
+            divContentPad.Attributes["class"] = mode == Chrome.TopNav
+                ? string.Empty
+                : "p-margin-mobile md:p-margin-desktop";
+        }
+
         private void RenderChrome()
         {
+            if (ChromeMode == Chrome.Bare)
+            {
+                return;
+            }
+
+            if (ChromeMode == Chrome.TopNav)
+            {
+                RenderTopNav();
+                return;
+            }
+
+
             pnlAuthActions.Visible = LoggedIn;
-            pnlAnonActions.Visible = !LoggedIn;
             pnlAnonLinks.Visible = !LoggedIn;
             btnLogout.Visible = LoggedIn;
 
@@ -66,6 +143,29 @@ namespace ForteLogisticsApp
             }
 
             litNav.Text = BuildNav();
+        }
+
+        /// <summary>
+        /// Fills the landing page's top bar. It always carries the public links, even for a
+        /// signed-in visitor: Default.aspx is the marketing page, and the role navigation has
+        /// grouped section headings that do not survive being laid out in a row. Signed-in
+        /// users reach their portal from the avatar cluster on the right.
+        /// </summary>
+        private void RenderTopNav()
+        {
+            litTopNav.Text = BuildPublicNav();
+
+            pnlTopAuth.Visible = LoggedIn;
+            pnlTopAuthMobile.Visible = LoggedIn;
+            pnlTopAnon.Visible = !LoggedIn;
+            pnlTopAnonMobile.Visible = !LoggedIn;
+
+            if (LoggedIn)
+            {
+                string fullName = (Session["FullName"] as string) ?? "User";
+                litTopUserName.Text = Server.HtmlEncode(fullName);
+                litTopAvatar.Text = Server.HtmlEncode(Initials(fullName));
+            }
         }
 
         /// <summary>Human-readable account descriptor shown under the user's name.</summary>
@@ -142,19 +242,29 @@ namespace ForteLogisticsApp
             return false;
         }
 
-        private string BuildNav()
+        /// <summary>
+        /// The public link set. Shared by the signed-out side rail and by the landing page's
+        /// top bar, which shows it regardless of who is signed in.
+        /// </summary>
+        private string BuildPublicNav()
         {
             var sb = new StringBuilder();
+            AddLink(sb, "~/Default.aspx", "home", "Home");
+            AddLink(sb, "~/Default.aspx#services", "local_shipping", "Services");
+            AddLink(sb, "~/Default.aspx#track", "search", "Track Parcel");
+            AddLink(sb, "~/Default.aspx#quote", "calculate", "Get a Quote");
+            AddLink(sb, "~/Contact.aspx", "support_agent", "Contact Us");
+            return sb.ToString();
+        }
 
+        private string BuildNav()
+        {
             if (!LoggedIn)
             {
-                AddLink(sb, "~/Default.aspx", "home", "Home");
-                AddLink(sb, "~/Default.aspx#services", "local_shipping", "Services");
-                AddLink(sb, "~/Default.aspx#track", "search", "Track Parcel");
-                AddLink(sb, "~/Default.aspx#quote", "calculate", "Get a Quote");
-                AddLink(sb, "~/Contact.aspx", "support_agent", "Contact Us");
-                return sb.ToString();
+                return BuildPublicNav();
             }
+
+            var sb = new StringBuilder();
 
             switch (Role)
             {
@@ -167,16 +277,23 @@ namespace ForteLogisticsApp
                     break;
 
                 case "Staff":
-                    AddSection(sb, "Operations");
-                    AddLink(sb, "~/Ops/Dashboard.aspx", "dashboard", "Dashboard");
-                    AddLink(sb, "~/Ops/ParcelRegistration.aspx", "add_box", "Register Parcel");
-                    AddLink(sb, "~/Ops/Warehouse.aspx", "warehouse", "Warehouse");
-                    AddLink(sb, "~/Ops/RoutePlanning.aspx", "route", "Route Planning");
-                    AddLink(sb, "~/Admin/Fleet.aspx", "local_shipping", "Fleet");
-
                     // Drivers are Staff who also hold a row in dbo.[Driver]; the registry,
-                    // not the role, is what decides whether these links belong here.
-                    if (SecurePage.IsDriver(SecurePage.CurrentUserId()))
+                    // not the role, is what decides whether these links belong here. A driver
+                    // may perform their own assigned deliveries and nothing route/vehicle/
+                    // parcel-allocation-related, so those pages (now enforced server-side by
+                    // RequireOperationsStaff) are not offered to them at all.
+                    bool isDriver = SecurePage.IsDriver(SecurePage.CurrentUserId());
+
+                    if (!isDriver)
+                    {
+                        AddSection(sb, "Operations");
+                        AddLink(sb, "~/Ops/Dashboard.aspx", "dashboard", "Dashboard");
+                        AddLink(sb, "~/Ops/ParcelRegistration.aspx", "add_box", "Register Parcel");
+                        AddLink(sb, "~/Ops/Warehouse.aspx", "warehouse", "Warehouse");
+                        AddLink(sb, "~/Ops/RoutePlanning.aspx", "route", "Route Planning");
+                        AddLink(sb, "~/Admin/Fleet.aspx", "local_shipping", "Fleet");
+                    }
+                    else
                     {
                         AddSection(sb, "My Deliveries");
                         AddLink(sb, "~/Driver/Dashboard.aspx", "assignment", "My Manifest");

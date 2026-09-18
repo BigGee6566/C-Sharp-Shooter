@@ -102,5 +102,25 @@ namespace ForteLogisticsApp.Security
                 Response.Redirect("~/AccessDenied.aspx");
             }
         }
+
+        /// <summary>
+        /// Gates route/vehicle/parcel-allocation pages (Route Planning, Warehouse, Parcel
+        /// Registration, Fleet): Admin or Staff, but never a driver.
+        ///
+        /// "Staff" covers both office dispatch/warehouse people and drivers - membership of
+        /// dbo.[Driver], not the Role column, is what actually makes someone a driver (see
+        /// IsDriver above). Without this, a driver could open Route Planning and assign
+        /// parcels/routes/vehicles to themselves or anyone else, which the business rules
+        /// explicitly forbid: drivers may perform their own assigned deliveries and nothing
+        /// route/vehicle/allocation-related.
+        /// </summary>
+        protected void RequireOperationsStaff()
+        {
+            RequireRole("Admin", "Staff");
+            if (string.Equals(Role, "Staff", StringComparison.OrdinalIgnoreCase) && IsDriver(UserId))
+            {
+                Response.Redirect("~/AccessDenied.aspx");
+            }
+        }
     }
 }

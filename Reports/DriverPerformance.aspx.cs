@@ -15,7 +15,9 @@ namespace ForteLogisticsApp.Reports
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            RequireRole("Admin", "Staff");
+            // Cross-driver performance data - not something a driver should see about
+            // colleagues, only office staff/management.
+            RequireOperationsStaff();
             if (!IsPostBack) BindReport();
         }
 

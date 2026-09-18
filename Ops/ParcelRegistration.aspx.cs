@@ -19,7 +19,7 @@ namespace ForteLogisticsApp.Ops
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            RequireRole("Admin", "Staff");
+            RequireOperationsStaff();
             if (IsPostBack) return;
 
             SortingService.BindCities(ddlOrigin);
