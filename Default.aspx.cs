@@ -16,6 +16,33 @@ namespace ForteLogisticsApp
     {
         protected void Page_Load(object sender, EventArgs e)
         {
+            // Bound every request (not just !IsPostBack): the cards are plain HTML radios
+            // whose checked state lives in hfQuoteSize rather than ViewState, exactly like
+            // Customer/BookShipment.aspx step 1, which this reuses.
+            rptQuoteSizes.DataSource = ParcelSize.All;
+            rptQuoteSizes.DataBind();
+        }
+
+        /// <summary>Emits the checked attribute for the band currently held in hfQuoteSize.</summary>
+        protected string QuoteCheckedAttr(object code)
+        {
+            string selected = string.IsNullOrEmpty(hfQuoteSize.Value) ? ParcelSize.Default.Code : hfQuoteSize.Value;
+            return string.Equals(Convert.ToString(code), selected, StringComparison.OrdinalIgnoreCase)
+                ? "checked=\"checked\""
+                : string.Empty;
+        }
+
+        /// <summary>
+        /// Carries the selected card into the booking wizard as a plain size code - the same
+        /// code BookShipment already re-validates server-side via ParcelSize.Find and never
+        /// trusts to match on its own, so nothing sensitive crosses this redirect. An
+        /// anonymous visitor is bounced to Login first (SecurePage.RequireRole's normal
+        /// returnUrl handling) and lands on the booking page with this selection intact.
+        /// </summary>
+        protected void btnContinueToBooking_Click(object sender, EventArgs e)
+        {
+            string code = ParcelSize.Find(hfQuoteSize.Value).Code;
+            Response.Redirect("~/Customer/BookShipment.aspx?size=" + Server.UrlEncode(code));
         }
 
         protected void btnTrack_Click(object sender, EventArgs e)
@@ -85,23 +112,5 @@ namespace ForteLogisticsApp
             lblTrackResult.Text = sb.ToString();
         }
 
-        protected void btnCalculate_Click(object sender, EventArgs e)
-        {
-            string origin = ddlOrigin.SelectedItem.Text;
-            string destination = ddlDestination.SelectedItem.Text;
-
-            decimal weight;
-            if (CourierService.TryParseWeight(txtWeight.Text, out weight) && weight > 0m)
-            {
-                decimal quote = CourierService.CalculateQuote(origin, destination, weight);
-                lblQuoteResult.CssClass = "block text-center font-label-sm text-body-lg text-primary font-bold mt-4";
-                lblQuoteResult.Text = "Estimated cost: R " + quote.ToString("F2");
-            }
-            else
-            {
-                lblQuoteResult.CssClass = UiHelper.AlertClass("error") + " mt-4";
-                lblQuoteResult.Text = "Please enter a valid weight in kilograms.";
-            }
-        }
     }
 }

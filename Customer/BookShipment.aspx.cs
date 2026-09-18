@@ -128,6 +128,16 @@ namespace ForteLogisticsApp.CustomerPortal
                 txtPickupStreet.Text = Db.ToStr(Db.Scalar(
                     "SELECT Address FROM dbo.[User] WHERE UserID = @u", "@u", UserId));
 
+                // A size selected on the landing page's quotation cards arrives here as a
+                // plain code, e.g. ?size=Large. ParcelSize.Find falls back to Default for
+                // anything unrecognised, so this is never trusted to be a real band on its
+                // own - it only decides which card starts checked.
+                string requestedSize = Request.QueryString["size"];
+                if (!string.IsNullOrEmpty(requestedSize))
+                {
+                    hfSelectedSize.Value = ParcelSize.Find(requestedSize).Code;
+                }
+
                 UpdateWizardIndicators(1);
             }
         }
