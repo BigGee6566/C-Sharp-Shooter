@@ -35,6 +35,19 @@
                         Is a driver (adds them to the fleet and makes them assignable on routes)
                     </label>
                 </div>
+                <asp:Panel ID="pnlEClientType" runat="server" CssClass="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-on-surface uppercase mb-1">Client Type</label>
+                        <asp:DropDownList ID="ddlEClientType" runat="server">
+                            <asp:ListItem>Individual</asp:ListItem><asp:ListItem>Business</asp:ListItem>
+                        </asp:DropDownList>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-on-surface uppercase mb-1">Business Name (Business clients only)</label>
+                        <asp:TextBox ID="txtEBusinessName" runat="server" CssClass="fcl-input" placeholder="e.g. Acme Traders (Pty) Ltd"></asp:TextBox>
+                        <p class="text-xs text-on-surface-variant mt-1">Clients sharing the same business name see and pay each other's invoices together under My Invoices.</p>
+                    </div>
+                </asp:Panel>
                 <div class="md:col-span-2">
                     <label class="block text-xs font-bold text-on-surface uppercase mb-1">Address</label>
                     <asp:TextBox ID="txtEAddress" runat="server" CssClass="fcl-input"></asp:TextBox>

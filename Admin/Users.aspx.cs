@@ -24,6 +24,9 @@ namespace ForteLogisticsApp.AdminPortal
         protected HiddenField hfEditId;
         protected Button btnSaveEdit, btnCancelEdit;
         protected Label lblEditMsg;
+        protected Panel pnlEClientType;
+        protected DropDownList ddlEClientType;
+        protected TextBox txtEBusinessName;
 
         protected void Page_Load(object sender, EventArgs e)
         {
@@ -157,6 +160,18 @@ namespace ForteLogisticsApp.AdminPortal
             SelectValue(ddlERole, Db.ToStr(r["Role"]));
             chkEIsDriver.Checked = Db.ToInt(Db.Scalar(
                 "SELECT COUNT(*) FROM dbo.[Driver] WHERE UserID = @u", "@u", userId)) > 0;
+
+            pnlEClientType.Visible = Db.ToStr(r["Role"]) == "Customer";
+            if (pnlEClientType.Visible)
+            {
+                DataTable ct = Db.Query(
+                    @"SELECT c.ClientType, b.BusinessName FROM dbo.[Client] c
+                      LEFT JOIN dbo.Business b ON b.BusinessID = c.BusinessID
+                      WHERE c.UserID = @u", "@u", userId);
+                SelectValue(ddlEClientType, ct.Rows.Count > 0 ? Db.ToStr(ct.Rows[0]["ClientType"]) : "Individual");
+                txtEBusinessName.Text = ct.Rows.Count > 0 ? Db.ToStr(ct.Rows[0]["BusinessName"]) : string.Empty;
+            }
+
             lblEditMsg.Text = string.Empty;
             pnlEdit.Visible = true;
         }
@@ -196,6 +211,11 @@ namespace ForteLogisticsApp.AdminPortal
             // If the role changed, make sure the matching role record exists.
             EnsureRoleRecord(userId, role);
 
+            if (role == "Customer")
+            {
+                SetClientBilling(userId, ddlEClientType.SelectedValue, txtEBusinessName.Text.Trim());
+            }
+
             // Only Staff can drive; moving someone to Customer or Admin un-enrols them.
             bool wantsDriver = chkEIsDriver.Checked && role == "Staff";
             if (!SetDriverEnrolment(userId, wantsDriver))
@@ -211,6 +231,29 @@ namespace ForteLogisticsApp.AdminPortal
             pnlEdit.Visible = false;
             SetMsg("User updated.", true);
             LoadUsers();
+        }
+
+        /// <summary>
+        /// Sets a customer's billing type and, for Business, links them to a Business row
+        /// (found by name, or created if this is the first Business client with that name).
+        /// Clients that share a Business see and pay each other's invoices together under
+        /// My Invoices - see PaymentService.PayInvoices.
+        /// </summary>
+        private void SetClientBilling(int userId, string clientType, string businessName)
+        {
+            int? businessId = null;
+            if (clientType == "Business" && businessName.Length > 0)
+            {
+                object existing = Db.Scalar(
+                    "SELECT BusinessID FROM dbo.Business WHERE BusinessName = @n", "@n", businessName);
+                businessId = (existing != null && existing != DBNull.Value)
+                    ? Db.ToInt(existing)
+                    : Db.Insert("INSERT INTO dbo.Business (BusinessName) VALUES (@n)", "@n", businessName);
+            }
+
+            Db.NonQuery(
+                "UPDATE dbo.[Client] SET ClientType = @t, BusinessID = @b WHERE UserID = @u",
+                "@t", clientType, "@b", businessId, "@u", userId);
         }
 
         protected void btnCancelEdit_Click(object sender, EventArgs e)

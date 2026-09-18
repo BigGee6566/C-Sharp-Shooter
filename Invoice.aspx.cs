@@ -24,10 +24,12 @@ namespace ForteLogisticsApp
 
             DataTable dt = Db.Query(
                 @"SELECT p.InvoiceNumber, p.Amount, p.PaymentStatus, p.IssuedDate, p.ClientID,
+                         c.BusinessID,
                          s.TrackingNumber, s.ParcelDescription, s.OriginCity, s.DestCity,
                          s.ParcelWeight, s.ParcelLengthCm, s.ParcelWidthCm, s.ParcelHeightCm,
                          u.FullName, u.Email
                   FROM dbo.[Payment] p
+                  LEFT JOIN dbo.[Client] c ON c.UserID = p.ClientID
                   LEFT JOIN dbo.[Shipment] s ON s.ShipmentID = p.ShipmentID
                   LEFT JOIN dbo.[User] u ON u.UserID = p.ClientID
                   WHERE p.PaymentID = @id", "@id", id);
@@ -35,8 +37,17 @@ namespace ForteLogisticsApp
             if (dt.Rows.Count == 0) { ShowNotFound(); return; }
             DataRow r = dt.Rows[0];
 
-            // Customers may only view their own invoices.
-            if (Role == "Customer" && Db.ToInt(r["ClientID"]) != UserId) { ShowNotFound(); return; }
+            // Customers may view their own invoices, or - if they belong to a Business -
+            // any invoice belonging to another client of that same Business (My Invoices
+            // lists those rows for bulk payment, so the View link must be able to open them).
+            if (Role == "Customer" && Db.ToInt(r["ClientID"]) != UserId)
+            {
+                object myBusinessId = Db.Scalar("SELECT BusinessID FROM dbo.[Client] WHERE UserID = @u", "@u", UserId);
+                bool sameBusiness = myBusinessId != null && myBusinessId != DBNull.Value &&
+                                    r["BusinessID"] != DBNull.Value &&
+                                    Db.ToInt(myBusinessId) == Db.ToInt(r["BusinessID"]);
+                if (!sameBusiness) { ShowNotFound(); return; }
+            }
 
             litInvoiceNo.Text = Db.ToStr(r["InvoiceNumber"]);
             litDate.Text = Convert.ToDateTime(r["IssuedDate"]).ToString("dd MMMM yyyy");
