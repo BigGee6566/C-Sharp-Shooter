@@ -41,19 +41,107 @@
         .fcl-card-action:hover .material-symbols-outlined { transform: translateX(4px); }
         .fcl-card-action:focus-visible { outline: 2px solid #dce1ff; outline-offset: 3px; }
 
-        /* Quotation cards - identical selection mechanism to Customer/BookShipment.aspx step
-           1 (same ParcelSize source, same radio-driven card), sized for this narrower panel. */
-        .size-card-input:checked + .size-card {
-            border-color: #003399;
-            background-color: rgba(0, 51, 153, 0.04);
-            box-shadow: 0 0 0 2px #003399;
+        /* ===== Hero tab bar =====
+           switchTab() (unchanged) toggles the shared .tab-active / .text-outline classes -
+           only what "active" looks like is redefined here, scoped to #hero-tool, so the
+           Site1.Master .tab-active rule used elsewhere is untouched. This replaces the boxy
+           border-bottom treatment with bold text plus a short pink underline beneath the
+           label - no rectangle around either tab, active or not. */
+        #hero-tool .hero-tab {
+            position: relative;
+            border: 0;
+            background: none;
         }
-        .size-card-check { display: none; }
-        .size-card-input:checked + .size-card .size-card-check { display: inline-flex; }
-        .size-card-input:checked + .size-card .size-card-icon { display: none; }
+        #hero-tool .hero-tab.tab-active {
+            border-bottom: none;
+            color: #ffffff;
+            font-weight: 800;
+        }
+        #hero-tool .hero-tab.tab-active::after {
+            content: "";
+            position: absolute;
+            left: 50%;
+            bottom: -1px;
+            transform: translateX(-50%);
+            width: 56px;
+            height: 4px;
+            border-radius: 2px;
+            background: #e2007c;
+        }
+        #hero-tool .hero-tab:hover { opacity: 0.85; }
+        #hero-tool .hero-tab:focus-visible {
+            outline: 2px solid #e2007c;
+            outline-offset: 4px;
+            border-radius: 6px;
+        }
+
+        /* ===== Quotation cards =====
+           Same selection mechanism as Customer/BookShipment.aspx step 1 (native radio input,
+           sr-only, sibling-combinator styling of the visible .size-card) - kept because a real
+           <input type="radio"> already gives screen readers the correct role and checked
+           state for free, which is better than reproducing it with ARIA. Only the visual
+           design changes here. */
+        .size-card {
+            position: relative;
+            padding: 20px 18px 16px;
+            transition: transform 0.25s ease, box-shadow 0.25s ease, background 0.25s ease, border-color 0.25s ease;
+        }
+        .size-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 24px rgba(0, 32, 104, 0.12);
+        }
+        .size-card-input:checked + .size-card {
+            background: linear-gradient(180deg, #004aad 0%, #002068 100%);
+            border-color: #004aad;
+            border-width: 2px;
+        }
+        .size-card-input:checked + .size-card:hover {
+            transform: none;
+            box-shadow: 0 10px 28px rgba(0, 32, 104, 0.28);
+        }
+        .size-card-input:checked + .size-card .qcard-title,
+        .size-card-input:checked + .size-card .qcard-price {
+            color: #ffffff;
+        }
+        .size-card-input:checked + .size-card .qcard-weight,
+        .size-card-input:checked + .size-card .qcard-est-label {
+            color: rgba(255, 255, 255, 0.7);
+        }
+        .size-card-input:checked + .size-card .qcard-divider {
+            border-color: rgba(255, 255, 255, 0.15);
+        }
         .size-card-input:focus-visible + .size-card {
             outline: 3px solid #8aa4ff;
             outline-offset: 2px;
+        }
+
+        /* Radio indicator, top-right of every card: an outlined ring when unselected, a
+           filled pink circle with a white check when selected. Replaces the old per-card
+           category icon entirely - one consistent indicator for all four cards. */
+        .qcard-radio-fill { display: none; }
+        .size-card-input:checked + .size-card .qcard-radio-ring { display: none; }
+        .size-card-input:checked + .size-card .qcard-radio-fill { display: flex; }
+
+        /* Helper note pill under the cards. */
+        .qcard-note {
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        /* Continue-to-Booking CTA: the arrow is a decorative overlay (asp:Button renders as
+           <input type="submit">, which cannot contain child markup), so it sits in a sibling
+           span positioned over the button rather than inside it - the button's own centred
+           label and padding are untouched. */
+        .qcard-cta-wrap { position: relative; }
+        .qcard-cta {
+            box-shadow: 0 12px 28px rgba(226, 0, 124, 0.35);
+        }
+        .qcard-cta-arrow {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #ffffff;
+            pointer-events: none;
         }
 
         /* ===== Enterprise Logistics Services cards ===== */
@@ -165,8 +253,8 @@
                     <div class="flex flex-col justify-center" id="hero-tool">
                         <div class="hero-glass p-8 rounded-3xl w-full max-w-xl self-end">
                             <div class="flex border-b border-outline-variant/30 mb-8">
-                                <button type="button" class="flex-1 pb-4 font-headline-md text-headline-md tab-active transition-all" id="tab-track" onclick="switchTab('track')">Track Parcel</button>
-                                <button type="button" class="flex-1 pb-4 font-headline-md text-headline-md text-outline hover:text-primary transition-all" id="tab-quote" onclick="switchTab('quote')">Get Quote</button>
+                                <button type="button" class="hero-tab flex-1 pb-4 font-headline-md text-headline-md tab-active transition-all" id="tab-track" onclick="switchTab('track')">Track Parcel</button>
+                                <button type="button" class="hero-tab flex-1 pb-4 font-headline-md text-headline-md text-outline transition-all" id="tab-quote" onclick="switchTab('quote')">Get Quote</button>
                             </div>
 
                             <!-- Track Form -->
@@ -188,7 +276,7 @@
                                 <asp:HiddenField ID="hfQuoteSize" runat="server" Value="Small" />
                                 <fieldset class="border-0 p-0 m-0">
                                     <legend class="sr-only">Parcel size</legend>
-                                    <div class="grid grid-cols-2 gap-3 max-h-72 overflow-y-auto pr-1">
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                         <asp:Repeater ID="rptQuoteSizes" runat="server">
                                             <ItemTemplate>
                                                 <label class="cursor-pointer relative block h-full">
@@ -197,16 +285,24 @@
                                                            <%# QuoteCheckedAttr(Eval("Code")) %>
                                                            class="size-card-input sr-only"
                                                            onchange='<%# "setQuoteSize(\"" + Eval("Code") + "\")" %>' />
-                                                    <div class="size-card p-3 rounded-xl border border-outline-variant hover:border-primary transition-all h-full flex flex-col justify-between bg-surface-container-lowest">
-                                                        <div class="flex justify-between items-center mb-1">
-                                                            <span class="font-bold text-on-surface text-sm"><%# Eval("Name") %></span>
-                                                            <span class="material-symbols-outlined text-primary text-base size-card-icon"><%# Eval("Icon") %></span>
-                                                            <span class="material-symbols-outlined text-primary text-base size-card-check" aria-hidden="true">check_circle</span>
+                                                    <div class="size-card rounded-xl border border-outline-variant bg-surface-container-lowest h-full flex flex-col justify-between">
+                                                        <div class="flex items-start justify-between gap-2 pr-8">
+                                                            <div>
+                                                                <div class="qcard-title font-bold text-on-surface text-sm"><%# Eval("Name") %></div>
+                                                                <div class="qcard-weight text-[11px] text-on-surface-variant mt-1"><%# Eval("MaxWeightText") %></div>
+                                                            </div>
                                                         </div>
-                                                        <div class="text-[11px] text-on-surface-variant"><%# Eval("MaxWeightText") %></div>
-                                                        <div class="mt-2 pt-2 border-t border-outline-variant/50 text-right">
-                                                            <span class="text-[10px] text-on-surface-variant">Est. from</span>
-                                                            <div class="text-sm font-bold text-primary"><%# Eval("FromPriceText") %></div>
+
+                                                        <!-- Single consistent selection indicator, top-right - replaces the old
+                                                             per-card category icon entirely. -->
+                                                        <span class="qcard-radio-ring absolute top-4 right-4 w-6 h-6 rounded-full border-2 border-outline-variant" aria-hidden="true"></span>
+                                                        <span class="qcard-radio-fill absolute top-4 right-4 w-6 h-6 rounded-full bg-[#e2007c] text-white items-center justify-center" aria-hidden="true">
+                                                            <span class="material-symbols-outlined text-sm font-bold">check</span>
+                                                        </span>
+
+                                                        <div class="qcard-divider mt-3 pt-3 border-t border-outline-variant/40 flex items-end justify-between">
+                                                            <span class="qcard-est-label text-[10px] font-bold uppercase tracking-wide text-on-surface-variant">Est. from</span>
+                                                            <span class="qcard-price text-2xl font-black leading-none text-primary"><%# Eval("FromPriceText") %></span>
                                                         </div>
                                                     </div>
                                                 </label>
@@ -214,13 +310,19 @@
                                         </asp:Repeater>
                                     </div>
                                 </fieldset>
-                                <p class="text-[11px] text-outline">
-                                    From-prices are for a local delivery; your final price is confirmed from the
-                                    collection and delivery cities when you book.
-                                </p>
-                                <asp:Button ID="btnContinueToBooking" runat="server" Text="Continue to Booking" OnClick="btnContinueToBooking_Click"
-                                    CssClass="w-full py-4 primary-gradient-btn text-on-primary font-bold uppercase tracking-widest rounded-xl cursor-pointer border-0" />
-                                <p class="text-center text-outline font-label-sm text-xs">Sign in or register to complete your booking - your selected size comes with you.</p>
+                                <div class="qcard-note flex items-start gap-3 rounded-xl px-4 py-3">
+                                    <span class="flex-shrink-0 flex items-center justify-center w-5 h-5 rounded-full border border-white/60 text-white/85 text-[11px] font-bold mt-0.5" aria-hidden="true">i</span>
+                                    <p class="text-[13px] leading-snug text-white/85">
+                                        From-prices are for a local delivery.<br />
+                                        Final price is confirmed from the collection and delivery cities when you book.
+                                    </p>
+                                </div>
+                                <div class="qcard-cta-wrap">
+                                    <asp:Button ID="btnContinueToBooking" runat="server" Text="Continue to Booking" OnClick="btnContinueToBooking_Click"
+                                        CssClass="qcard-cta w-full py-4 primary-gradient-btn text-on-primary font-bold uppercase tracking-widest rounded-xl cursor-pointer border-0" />
+                                    <span class="material-symbols-outlined qcard-cta-arrow" aria-hidden="true">arrow_forward</span>
+                                </div>
+                                <p class="text-center text-white/70 font-label-sm text-xs">Sign in or register to complete your booking - your selected size comes with you.</p>
                             </div>
                         </div>
                     </div>
