@@ -55,6 +55,77 @@
             outline: 3px solid #8aa4ff;
             outline-offset: 2px;
         }
+
+        /* ===== Enterprise Logistics Services cards ===== */
+
+        /* Card shell: soft brand-tinted shadow at rest, deeper on hover with a 4px lift and a
+           brand-gradient ring that fades in (masked so only the ring itself is visible, the
+           existing 1px border stays crisp underneath). */
+        .fcl-service-card {
+            position: relative;
+            box-shadow: 0 12px 32px rgba(0, 32, 104, 0.10);
+            transition: transform 0.35s ease, box-shadow 0.35s ease;
+        }
+        .fcl-service-card:hover,
+        .fcl-service-card:focus-within {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 48px rgba(0, 32, 104, 0.16);
+        }
+        .fcl-service-card::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            padding: 1.5px;
+            background: linear-gradient(135deg, #004aad, #e2165f);
+            -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.35s ease;
+        }
+        .fcl-service-card:hover::before,
+        .fcl-service-card:focus-within::before {
+            opacity: 1;
+        }
+
+        /* Image area: a permanent brand-gradient fallback sits behind the <img>, so a missing
+           file (e.g. parcel-collection.jpg) never renders broken-image alt text - onerror just
+           fades the <img> out and the gradient already underneath shows through. */
+        .fcl-media-fallback {
+            background: linear-gradient(135deg, #004aad, #e2165f);
+        }
+        .fcl-service-img {
+            transition: transform 0.5s ease, opacity 0.25s ease;
+        }
+        .fcl-service-card:hover .fcl-service-img {
+            transform: scale(1.05);
+        }
+        .fcl-media-overlay {
+            background: linear-gradient(to top, rgba(0, 32, 104, 0.55) 0%, rgba(0, 32, 104, 0) 55%);
+        }
+
+        /* Icon chip deliberately overlaps the image/body seam: it is the first child of the
+           body wrapper (which is not clipped), pulled up by half its own height, so the
+           overlap holds at any card width without knowing the image's rendered pixel height. */
+        .fcl-icon-chip {
+            background: linear-gradient(135deg, #004aad, #e2165f);
+            box-shadow: 0 10px 24px rgba(0, 32, 104, 0.25);
+        }
+
+        /* "Most Used" ribbon on the featured (Warehousing) card. */
+        .fcl-featured-ribbon {
+            background: #e2165f;
+            box-shadow: 0 4px 14px rgba(226, 22, 95, 0.35);
+        }
+
+        /* View-mode segmented control (placeholder). Buttons are disabled - it is not wired to
+           anything yet, so it must not sit in the tab order or imply it can be activated. */
+        .fcl-view-toggle button[aria-pressed="true"] {
+            background: linear-gradient(135deg, #004aad, #e2165f);
+            color: #fff;
+        }
     </style>
 </asp:Content>
 
@@ -198,69 +269,133 @@
 
             <!-- Services Grid Target Section -->
             <section id="services" class="py-32 px-margin-desktop max-w-[1440px] mx-auto">
-                <div class="flex justify-between items-end mb-12">
+                <div class="flex flex-wrap justify-between items-end gap-6 mb-12">
                     <div class="max-w-2xl">
                         <h2 class="font-display-lg text-headline-lg text-on-surface mb-4 uppercase tracking-tight">Enterprise Logistics <span class="logo-gradient">Services</span></h2>
                         <p class="font-body-lg text-body-lg text-on-surface-variant">Scalable solutions from warehouse storage to door-to-door distribution, integrated into a single glass-pane command center.</p>
                     </div>
-                    <div class="hidden md:block">
+                    <div class="hidden md:flex items-center gap-5">
+                        <!-- Placeholder view-mode switch: not wired to anything yet, so both
+                             buttons are disabled - inert to click and keyboard alike - rather
+                             than implying a Map view that does not exist. -->
+                        <div class="fcl-view-toggle inline-flex items-center gap-1 rounded-full bg-surface-container p-1 border border-outline-variant/50" role="group" aria-label="View mode (coming soon)">
+                            <button type="button" class="px-4 py-1.5 rounded-full font-label-sm text-label-sm font-bold uppercase tracking-wide text-on-surface-variant" aria-pressed="true" disabled>Cards</button>
+                            <button type="button" class="px-4 py-1.5 rounded-full font-label-sm text-label-sm font-bold uppercase tracking-wide text-on-surface-variant" aria-pressed="false" disabled>Map</button>
+                        </div>
                         <span class="material-symbols-outlined text-display-lg text-outline-variant/30">grid_view</span>
                     </div>
                 </div>
                 <!-- Service cards. The image bleeds to the card edge and the description flex-grows,
                      so the three "View workflow" rows sit on one baseline whatever the copy length. -->
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-gutter items-stretch">
-                    <!-- Service Card 1 -->
-                    <div class="group flex flex-col overflow-hidden rounded-2xl bg-surface-container-lowest border border-outline-variant/60 shadow-sm hover:shadow-lg hover:border-primary/40 hover:-translate-y-1 transition-all duration-300">
-                        <div class="relative aspect-[4/3] w-full overflow-hidden bg-surface-container">
+                    <!-- Service Card 1: Parcel Collection -->
+                    <div class="fcl-service-card group flex flex-col overflow-hidden rounded-[28px] bg-surface-container-lowest border border-outline-variant/60">
+                        <div class="relative aspect-[4/3] w-full overflow-hidden">
+                            <div class="fcl-media-fallback absolute inset-0" aria-hidden="true"></div>
                             <img src='<%= ResolveUrl("~/Images/web/parcel-collection.jpg") %>' alt="Courier handing over sealed parcels at a collection point"
-                                 loading="lazy" class="absolute inset-0 h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                 loading="lazy" class="fcl-service-img absolute inset-0 h-full w-full object-cover"
+                                 onerror="this.onerror=null; this.style.opacity='0';" />
+                            <div class="fcl-media-overlay absolute inset-0" aria-hidden="true"></div>
 
-                            <div class="absolute top-4 left-4 bg-surface-container-lowest/90 backdrop-blur-md p-2 rounded-lg border border-primary/20 shadow-sm">
-                                <span class="material-symbols-outlined text-primary">package_2</span>
-                            </div>
+                            <div class="absolute top-4 left-4 z-10 min-w-[44px] h-11 px-3 rounded-full bg-white flex items-center justify-center text-primary font-extrabold font-label-md text-label-md shadow-[0_4px_14px_rgba(0,32,104,0.18)]" aria-hidden="true">01</div>
                         </div>
-                        <div class="flex flex-col flex-grow p-glass-padding">
+                        <div class="relative flex flex-col flex-grow px-glass-padding pb-glass-padding pt-10">
+                            <div class="fcl-icon-chip absolute -top-6 left-6 w-[52px] h-[52px] rounded-[14px] flex items-center justify-center text-white" aria-hidden="true">
+                                <span class="material-symbols-outlined">package_2</span>
+                            </div>
+
+                            <span class="inline-flex self-start items-center rounded-full bg-[#eef2ff] text-[#004aad] font-label-sm text-label-sm font-bold uppercase tracking-wide px-3 py-1 mb-3">Pickup</span>
                             <h3 class="font-headline-md text-headline-md text-on-surface mb-3">Parcel Collection</h3>
                             <p class="font-body-md text-body-md text-on-surface-variant mb-6 flex-grow">Automated scheduling and pickup optimization for high-volume corporate senders.</p>
+
+                            <div class="grid grid-cols-2 gap-3 mb-2">
+                                <div class="bg-surface-container rounded-xl p-3">
+                                    <div class="font-headline-sm text-headline-sm font-extrabold text-primary">2h</div>
+                                    <div class="font-label-sm text-[10px] font-bold uppercase tracking-wide text-on-surface-variant">Avg Pickup</div>
+                                </div>
+                                <div class="bg-surface-container rounded-xl p-3">
+                                    <div class="font-headline-sm text-headline-sm font-extrabold text-primary">99%</div>
+                                    <div class="font-label-sm text-[10px] font-bold uppercase tracking-wide text-on-surface-variant">On Time</div>
+                                </div>
+                            </div>
+
                             <button type="button" class="fcl-card-action" onclick="openModal('parcel')">
                                 <span>View Full Workflow</span>
                                 <span class="material-symbols-outlined">arrow_forward</span>
                             </button>
                         </div>
                     </div>
-                    <!-- Service Card 2 -->
-                    <div class="group flex flex-col overflow-hidden rounded-2xl bg-surface-container-lowest border border-outline-variant/60 shadow-sm hover:shadow-lg hover:border-primary/40 hover:-translate-y-1 transition-all duration-300">
-                        <div class="relative aspect-[4/3] w-full overflow-hidden bg-surface-container">
+                    <!-- Service Card 2: Warehousing (featured) -->
+                    <div class="fcl-service-card group flex flex-col overflow-hidden rounded-[28px] bg-surface-container-lowest border border-outline-variant/60">
+                        <div class="relative aspect-[4/3] w-full overflow-hidden">
+                            <div class="fcl-media-fallback absolute inset-0" aria-hidden="true"></div>
                             <img src='<%= ResolveUrl("~/Images/web/warehousing.jpg") %>' alt="Racked warehouse aisle used for fulfillment storage"
-                                 loading="lazy" class="absolute inset-0 h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                 loading="lazy" class="fcl-service-img absolute inset-0 h-full w-full object-cover"
+                                 onerror="this.onerror=null; this.style.opacity='0';" />
+                            <div class="fcl-media-overlay absolute inset-0" aria-hidden="true"></div>
 
-                            <div class="absolute top-4 left-4 bg-surface-container-lowest/90 backdrop-blur-md p-2 rounded-lg border border-secondary/20 shadow-sm">
-                                <span class="material-symbols-outlined text-secondary">warehouse</span>
+                            <div class="absolute top-4 left-4 z-10 min-w-[44px] h-11 px-3 rounded-full bg-white flex items-center justify-center text-primary font-extrabold font-label-md text-label-md shadow-[0_4px_14px_rgba(0,32,104,0.18)]" aria-hidden="true">02</div>
+                            <div class="fcl-featured-ribbon absolute top-4 right-4 z-10 flex items-center gap-1 rounded-full px-3 py-1.5 text-white font-label-sm text-label-sm font-bold uppercase tracking-wide">
+                                <span class="material-symbols-outlined text-sm">star</span> Most Used
                             </div>
                         </div>
-                        <div class="flex flex-col flex-grow p-glass-padding">
+                        <div class="relative flex flex-col flex-grow px-glass-padding pb-glass-padding pt-10">
+                            <div class="fcl-icon-chip absolute -top-6 left-6 w-[52px] h-[52px] rounded-[14px] flex items-center justify-center text-white" aria-hidden="true">
+                                <span class="material-symbols-outlined">warehouse</span>
+                            </div>
+
+                            <span class="inline-flex self-start items-center rounded-full bg-[#fdeef5] text-[#e2165f] font-label-sm text-label-sm font-bold uppercase tracking-wide px-3 py-1 mb-3">Storage</span>
                             <h3 class="font-headline-md text-headline-md text-on-surface mb-3">Warehousing</h3>
                             <p class="font-body-md text-body-md text-on-surface-variant mb-6 flex-grow">Smart fulfillment centers with real-time inventory tracking and multi-node routing.</p>
+
+                            <div class="grid grid-cols-2 gap-3 mb-2">
+                                <div class="bg-surface-container rounded-xl p-3">
+                                    <div class="font-headline-sm text-headline-sm font-extrabold text-primary">45+</div>
+                                    <div class="font-label-sm text-[10px] font-bold uppercase tracking-wide text-on-surface-variant">Hubs</div>
+                                </div>
+                                <div class="bg-surface-container rounded-xl p-3">
+                                    <div class="font-headline-sm text-headline-sm font-extrabold text-primary">24/7</div>
+                                    <div class="font-label-sm text-[10px] font-bold uppercase tracking-wide text-on-surface-variant">Tracking</div>
+                                </div>
+                            </div>
+
                             <button type="button" class="fcl-card-action" onclick="openModal('warehousing')">
                                 <span>View Full Workflow</span>
                                 <span class="material-symbols-outlined">arrow_forward</span>
                             </button>
                         </div>
                     </div>
-                    <!-- Service Card 3 -->
-                    <div class="group flex flex-col overflow-hidden rounded-2xl bg-surface-container-lowest border border-outline-variant/60 shadow-sm hover:shadow-lg hover:border-primary/40 hover:-translate-y-1 transition-all duration-300">
-                        <div class="relative aspect-[4/3] w-full overflow-hidden bg-surface-container">
+                    <!-- Service Card 3: Delivery Services -->
+                    <div class="fcl-service-card group flex flex-col overflow-hidden rounded-[28px] bg-surface-container-lowest border border-outline-variant/60">
+                        <div class="relative aspect-[4/3] w-full overflow-hidden">
+                            <div class="fcl-media-fallback absolute inset-0" aria-hidden="true"></div>
                             <img src='<%= ResolveUrl("~/Images/web/delivery-services.jpg") %>' alt="Delivery driver loading a parcel van for a last-mile run"
-                                 loading="lazy" class="absolute inset-0 h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                 loading="lazy" class="fcl-service-img absolute inset-0 h-full w-full object-cover"
+                                 onerror="this.onerror=null; this.style.opacity='0';" />
+                            <div class="fcl-media-overlay absolute inset-0" aria-hidden="true"></div>
 
-                            <div class="absolute top-4 left-4 bg-surface-container-lowest/90 backdrop-blur-md p-2 rounded-lg border border-tertiary/20 shadow-sm">
-                                <span class="material-symbols-outlined text-tertiary">local_shipping</span>
-                            </div>
+                            <div class="absolute top-4 left-4 z-10 min-w-[44px] h-11 px-3 rounded-full bg-white flex items-center justify-center text-primary font-extrabold font-label-md text-label-md shadow-[0_4px_14px_rgba(0,32,104,0.18)]" aria-hidden="true">03</div>
                         </div>
-                        <div class="flex flex-col flex-grow p-glass-padding">
+                        <div class="relative flex flex-col flex-grow px-glass-padding pb-glass-padding pt-10">
+                            <div class="fcl-icon-chip absolute -top-6 left-6 w-[52px] h-[52px] rounded-[14px] flex items-center justify-center text-white" aria-hidden="true">
+                                <span class="material-symbols-outlined">local_shipping</span>
+                            </div>
+
+                            <span class="inline-flex self-start items-center rounded-full bg-emerald-50 text-emerald-700 font-label-sm text-label-sm font-bold uppercase tracking-wide px-3 py-1 mb-3">Last Mile</span>
                             <h3 class="font-headline-md text-headline-md text-on-surface mb-3">Delivery Services</h3>
                             <p class="font-body-md text-body-md text-on-surface-variant mb-6 flex-grow">Last-mile precision with predictive arrival windows and secure proof-of-delivery.</p>
+
+                            <div class="grid grid-cols-2 gap-3 mb-2">
+                                <div class="bg-surface-container rounded-xl p-3">
+                                    <div class="font-headline-sm text-headline-sm font-extrabold text-primary">99.9%</div>
+                                    <div class="font-label-sm text-[10px] font-bold uppercase tracking-wide text-on-surface-variant">Precision</div>
+                                </div>
+                                <div class="bg-surface-container rounded-xl p-3">
+                                    <div class="font-headline-sm text-headline-sm font-extrabold text-primary">1.8k</div>
+                                    <div class="font-label-sm text-[10px] font-bold uppercase tracking-wide text-on-surface-variant">Fleet</div>
+                                </div>
+                            </div>
+
                             <button type="button" class="fcl-card-action" onclick="openModal('delivery')">
                                 <span>View Full Workflow</span>
                                 <span class="material-symbols-outlined">arrow_forward</span>
