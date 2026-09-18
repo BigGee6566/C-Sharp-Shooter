@@ -85,12 +85,8 @@ namespace ForteLogisticsApp.Finance
             if (e.CommandName == "paid")
             {
                 int paymentId = int.Parse((string)e.CommandArgument);
-                Db.NonQuery(
-                    @"UPDATE dbo.[Payment]
-                      SET PaymentStatus = 'Paid', PaymentMethod = 'EFT', ReferenceNumber = @ref
-                      WHERE PaymentID = @id",
-                    "@ref", "PAY" + DateTime.Now.ToString("yyMMddHHmmss"), "@id", paymentId);
-                SetMsg("Payment recorded.", true);
+                var outcome = PaymentService.MarkInvoicePaidByAdmin(paymentId, UserId, "EFT");
+                SetMsg(outcome.Message, outcome.Success);
                 LoadInvoices();
             }
         }

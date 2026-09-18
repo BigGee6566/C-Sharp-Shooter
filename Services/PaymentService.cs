@@ -198,6 +198,80 @@ namespace ForteLogisticsApp.Services
         }
 
         /// <summary>
+        /// Admin/Finance recording of a payment received outside the system (e.g. an EFT that
+        /// landed in the bank account) - Finance\Invoices.aspx's "Mark Paid".
+        ///
+        /// Unlike PayForShipment/PayInvoices this never calls PaymentGateway: there is no
+        /// charge to make, only a receipt to record, so it is not "sandbox payment" in the
+        /// same sense. It still shares their transactional, audited, race-safe shape: the
+        /// UPDLOCK'd read-then-conditional-update means two concurrent clicks (or a
+        /// resubmitted form) can only ever mark the invoice paid once - the second caller
+        /// simply finds it already Paid, so no separate idempotency key is needed here.
+        /// Authorization (Admin/Staff-only) is the caller's responsibility, exactly as every
+        /// other page-level action in this codebase enforces its own RequireRole.
+        /// </summary>
+        public static PaymentOutcome MarkInvoicePaidByAdmin(int paymentId, int adminUserId, string method)
+        {
+            PaymentOutcome outcome = null;
+
+            Db.RunInTransaction((conn, tx) =>
+            {
+                DataTable pay = Db.Query(conn, tx,
+                    @"SELECT PaymentStatus, InvoiceNumber, Amount, ShipmentID
+                      FROM dbo.[Payment] WITH (UPDLOCK, ROWLOCK) WHERE PaymentID = @id",
+                    "@id", paymentId);
+                if (pay.Rows.Count == 0)
+                {
+                    outcome = Fail("Invoice not found.");
+                    return;
+                }
+
+                DataRow row = pay.Rows[0];
+                if (Db.ToStr(row["PaymentStatus"]) != "Unpaid")
+                {
+                    outcome = Fail("That invoice has already been settled.");
+                    return;
+                }
+
+                decimal amount = Db.ToDecimal(row["Amount"]);
+                string invoiceNumber = Db.ToStr(row["InvoiceNumber"]);
+                string reference = "EFT-" + DateTime.UtcNow.ToString("yyyyMMddHHmmss");
+
+                Db.NonQuery(conn, tx,
+                    @"UPDATE dbo.[Payment]
+                      SET PaymentStatus = 'Paid', PaymentMethod = @m, ReferenceNumber = @r
+                      WHERE PaymentID = @id",
+                    "@m", method, "@r", reference, "@id", paymentId);
+
+                if (row["ShipmentID"] != DBNull.Value)
+                {
+                    Db.NonQuery(conn, tx,
+                        @"INSERT INTO dbo.[TrackingHistory] (ShipmentID, Location, Status, Remarks)
+                          VALUES (@s, 'Finance', 'InvoicePaid', @rm)",
+                        "@s", Db.ToInt(row["ShipmentID"]),
+                        "@rm", "Payment recorded by Finance (" + method + "), ref " + reference);
+                }
+
+                Db.NonQuery(conn, tx,
+                    @"INSERT INTO dbo.AuditLog (UserID, Action, Entity, EntityID, Details)
+                      VALUES (@u, 'Payment.AdminRecorded', 'Payment', @e, @d)",
+                    "@u", adminUserId, "@e", paymentId.ToString(),
+                    "@d", "Invoice " + invoiceNumber + " marked paid, ref " + reference);
+
+                outcome = new PaymentOutcome
+                {
+                    Success = true,
+                    Message = "Payment recorded.",
+                    ReferenceNumber = reference,
+                    InvoiceNumber = invoiceNumber,
+                    Amount = amount
+                };
+            });
+
+            return outcome;
+        }
+
+        /// <summary>
         /// Business (or self-service Individual) bulk invoice payment: pays one, several, or
         /// all of the selected invoices in a single charge.
         ///
