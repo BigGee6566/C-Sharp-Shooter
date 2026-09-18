@@ -209,10 +209,10 @@ namespace ForteLogisticsApp
                    "<span>Notifications</span>" + badge + "</a>";
         }
 
-        private void AddLink(StringBuilder sb, string url, string icon, string text)
+        private void AddLink(StringBuilder sb, string url, string icon, string text, bool highlightForFolder = false)
         {
             sb.Append("<a class='fcl-nav-link")
-              .Append(IsActiveLink(url) ? " fcl-nav-link-active" : string.Empty)
+              .Append(IsActiveLink(url, highlightForFolder) ? " fcl-nav-link-active" : string.Empty)
               .Append("' href='").Append(ResolveUrl(url)).Append("'>")
               .Append("<span class='material-symbols-outlined'>").Append(icon).Append("</span>")
               .Append("<span>").Append(text).Append("</span></a>");
@@ -223,7 +223,16 @@ namespace ForteLogisticsApp
             sb.Append("<div class='fcl-nav-section'>").Append(title).Append("</div>");
         }
 
-        private bool IsActiveLink(string url)
+        /// <summary>
+        /// True for the exact current page, always. <paramref name="highlightForFolder"/> is
+        /// an explicit per-link opt-in for the rare case where ONE link stands in for a whole
+        /// section (Staff's single "Reports" entry, which points at just the first report) -
+        /// it must never be inferred from the URL itself, or every link that happens to share
+        /// a folder lights up together. That was the actual bug: the check used to fire for
+        /// any "~/Reports/..." link whenever any report page was open, so Admin's four
+        /// separate Reports links (each its own page, not a stand-in) all lit up at once.
+        /// </summary>
+        private bool IsActiveLink(string url, bool highlightForFolder = false)
         {
             // Anchors point within a page, so they never own the "current page" highlight.
             if (url.Contains("#")) return false;
@@ -233,11 +242,10 @@ namespace ForteLogisticsApp
 
             if (string.Equals(current, url, StringComparison.OrdinalIgnoreCase)) return true;
 
-            // The nav carries one "Reports" entry; keep it lit on every report page.
-            if (url.StartsWith("~/Reports/", StringComparison.OrdinalIgnoreCase) &&
-                current.StartsWith("~/Reports/", StringComparison.OrdinalIgnoreCase))
+            if (highlightForFolder)
             {
-                return true;
+                string folder = url.Substring(0, url.LastIndexOf('/') + 1);
+                if (current.StartsWith(folder, StringComparison.OrdinalIgnoreCase)) return true;
             }
             return false;
         }
@@ -301,7 +309,7 @@ namespace ForteLogisticsApp
                     }
 
                     AddSection(sb, "Reports");
-                    AddLink(sb, "~/Reports/DailyParcelMovement.aspx", "analytics", "Reports");
+                    AddLink(sb, "~/Reports/DailyParcelMovement.aspx", "analytics", "Reports", highlightForFolder: true);
                     break;
 
                 case "Admin":
