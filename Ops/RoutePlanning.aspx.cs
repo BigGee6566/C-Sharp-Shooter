@@ -86,7 +86,7 @@ namespace ForteLogisticsApp.Ops
         {
             DataTable dt = Db.Query(
                 @"SELECT d.UserID AS DriverID,
-                         u.FullName + ' — ' + d.AvailabilityStatus + ' (' +
+                         u.FullName + ' - ' + d.AvailabilityStatus + ' (' +
                              CAST((SELECT COUNT(*) FROM dbo.[Shipment] s
                                    WHERE s.DriverID = d.UserID
                                      AND s.DeliveryStatus IN ('Assigned','OutForDelivery')) AS NVARCHAR(5))
@@ -156,7 +156,7 @@ namespace ForteLogisticsApp.Ops
             foreach (DataRow r in dt.Rows)
             {
                 cblParcels.Items.Add(new ListItem(
-                    Db.ToStr(r["TrackingNumber"]) + " → " + Db.ToStr(r["DestCity"]) + " (" + Db.ToStr(r["SortCategory"]) + ")",
+                    Db.ToStr(r["TrackingNumber"]) + " -> " + Db.ToStr(r["DestCity"]) + " (" + Db.ToStr(r["SortCategory"]) + ")",
                     Db.ToStr(r["ShipmentID"])));
             }
             pnlNoParcels.Visible = dt.Rows.Count == 0;

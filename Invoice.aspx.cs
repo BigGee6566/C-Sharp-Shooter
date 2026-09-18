@@ -64,7 +64,7 @@ namespace ForteLogisticsApp
             // Counter-registered shipments have a weight but no size band, so Describe()
             // returns a dash for them rather than a half-empty measurement.
             litParcelSpec.Text = Server.HtmlEncode(
-                Db.ToDecimal(r["ParcelWeight"]).ToString("0.##") + " kg · " +
+                Db.ToDecimal(r["ParcelWeight"]).ToString("0.##") + " kg - " +
                 ParcelSize.Describe(r["ParcelLengthCm"], r["ParcelWidthCm"], r["ParcelHeightCm"]));
 
             decimal amount = Db.ToDecimal(r["Amount"]);

@@ -70,12 +70,17 @@ namespace ForteLogisticsApp.Services
             else list.SelectedIndex = 0;
         }
 
-        /// <summary>Suggests a route name, e.g. "Metro-CPT · 05 Aug · Run 2".</summary>
+        /// <summary>
+        /// Suggests a route name, e.g. "Metro-CPT - 05 Aug - Run 2".
+        /// Plain ASCII: this feeds a TextBox.Text, which ASP.NET HTML-attribute-encodes when
+        /// rendering the value attribute, so an HTML entity here would come out as literal
+        /// "&amp;middot;" text in the box rather than a middle dot.
+        /// </summary>
         public static string SuggestRouteName(string category, DateTime date, int sequenceForDay)
         {
             if (string.IsNullOrEmpty(category)) category = "General";
             if (sequenceForDay < 1) sequenceForDay = 1;
-            return category + " · " + date.ToString("dd MMM") + " · Run " + sequenceForDay;
+            return category + " - " + date.ToString("dd MMM") + " - Run " + sequenceForDay;
         }
     }
 }

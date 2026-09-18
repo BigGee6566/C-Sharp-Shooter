@@ -28,7 +28,7 @@ namespace ForteLogisticsApp.AdminPortal
                   FROM dbo.[Driver] d JOIN dbo.[User] u ON u.UserID = d.UserID ORDER BY u.FullName");
 
             ddlDriver.Items.Clear();
-            ddlDriver.Items.Add(new ListItem("— Unassigned —", ""));
+            ddlDriver.Items.Add(new ListItem("-- Unassigned --", ""));
             foreach (DataRow r in drivers.Rows)
                 ddlDriver.Items.Add(new ListItem(Db.ToStr(r["FullName"]), Db.ToStr(r["DriverID"])));
 

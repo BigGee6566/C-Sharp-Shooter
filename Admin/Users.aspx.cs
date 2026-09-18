@@ -134,7 +134,7 @@ namespace ForteLogisticsApp.AdminPortal
                 " - please change it under My Profile after signing in.", "System");
 
             SetMsg(generated
-                    ? "User created. Temporary password: " + pwd + " — copy it now, it will not be shown again."
+                    ? "User created. Temporary password: " + pwd + " &mdash; copy it now, it will not be shown again."
                     : "User created.", true);
             txtName.Text = txtEmail.Text = txtPhone.Text = txtPassword.Text = string.Empty;
             chkIsDriver.Checked = false;

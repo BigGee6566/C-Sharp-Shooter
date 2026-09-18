@@ -78,9 +78,16 @@ namespace ForteLogisticsApp.Services
         }
 
         /// <summary>
-        /// Renders a dimension triple for display, e.g. "25 × 15 × 10 cm".
-        /// Returns an em dash when any part is missing - shipments booked at the Ops
+        /// Renders a dimension triple for display, e.g. "25 x 15 x 10 cm".
+        /// Returns a plain dash when any part is missing - shipments booked at the Ops
         /// counter have a weight but no band, so their dimensions are legitimately null.
+        ///
+        /// Plain ASCII ("x"/"-") rather than a Unicode multiplication sign or em dash: this
+        /// value is consumed both raw (Label/Literal.Text, which ASP.NET never HTML-encodes)
+        /// and wrapped in Server.HtmlEncode elsewhere (e.g. Invoice.aspx.cs) - an HTML entity
+        /// here would render correctly in the first case but come out as literal "&amp;times;"
+        /// text in the second, since HtmlEncode has no way to know an "&" it sees was meant to
+        /// start an entity rather than be a raw ampersand.
         /// </summary>
         public static string Describe(object lengthCm, object widthCm, object heightCm)
         {
@@ -88,9 +95,9 @@ namespace ForteLogisticsApp.Services
             decimal w = Data.Db.ToDecimal(widthCm);
             decimal h = Data.Db.ToDecimal(heightCm);
 
-            if (l <= 0m || w <= 0m || h <= 0m) return "—";
+            if (l <= 0m || w <= 0m || h <= 0m) return "-";
 
-            return l.ToString("0.##") + " × " + w.ToString("0.##") + " × " + h.ToString("0.##") + " cm";
+            return l.ToString("0.##") + " x " + w.ToString("0.##") + " x " + h.ToString("0.##") + " cm";
         }
 
         /// <summary>The bands offered, in the order they are shown.</summary>

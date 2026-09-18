@@ -104,7 +104,7 @@ namespace ForteLogisticsApp.AdminPortal
                 (Db.ToStr(r0["ReceiverPhone"]).Length > 0 ? " (" + Db.ToStr(r0["ReceiverPhone"]) + ")" : ""), "-");
             litPickup.Text = Enc(Db.ToStr(r0["PickupAddress"]), "-");
             litDelivery.Text = Enc(Db.ToStr(r0["DeliveryAddress"]), "-");
-            litRoute.Text = Server.HtmlEncode(Db.ToStr(r0["OriginCity"]) + " → " + Db.ToStr(r0["DestCity"]));
+            litRoute.Text = Server.HtmlEncode(Db.ToStr(r0["OriginCity"]) + " -> " + Db.ToStr(r0["DestCity"]));
             litWeight.Text = Db.ToDecimal(r0["ParcelWeight"]).ToString("0.##") + " kg";
             // Shows a dash for counter-registered shipments, which have no size band.
             litDimensions.Text = ParcelSize.Describe(

@@ -79,7 +79,7 @@ namespace ForteLogisticsApp.DriverPortal
 
             hfShipmentId.Value = Db.ToStr(r["ShipmentID"]);
             litParcel.Text = Server.HtmlEncode(Db.ToStr(r["TrackingNumber"]));
-            litDetails.Text = Server.HtmlEncode("To " + Db.ToStr(r["ReceiverName"]) + " · " +
+            litDetails.Text = Server.HtmlEncode("To " + Db.ToStr(r["ReceiverName"]) + " - " +
                               Db.ToStr(r["DeliveryAddress"]) + ", " + Db.ToStr(r["DestCity"]));
 
             // The expected recipient is already on the waybill - prefill it so the driver

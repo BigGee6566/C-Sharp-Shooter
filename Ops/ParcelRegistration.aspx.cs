@@ -41,7 +41,7 @@ namespace ForteLogisticsApp.Ops
             if (query.Length == 0)
             {
                 lblSenderMatch.CssClass = "block text-xs mt-1 text-gray-500";
-                lblSenderMatch.Text = "Walk-in (no account) — this parcel will not send notifications.";
+                lblSenderMatch.Text = "Walk-in (no account) &mdash; this parcel will not send notifications.";
                 return;
             }
 
@@ -52,7 +52,7 @@ namespace ForteLogisticsApp.Ops
             if (dt.Rows.Count == 0)
             {
                 lblSenderMatch.CssClass = UiHelper.AlertClass("warning") + " mt-1";
-                lblSenderMatch.Text = "No account found — registering as a walk-in.";
+                lblSenderMatch.Text = "No account found &mdash; registering as a walk-in.";
                 return;
             }
 
@@ -61,7 +61,7 @@ namespace ForteLogisticsApp.Ops
 
             lblSenderMatch.CssClass = UiHelper.AlertClass("success") + " mt-1";
             lblSenderMatch.Text = "Matched: " + Server.HtmlEncode(Db.ToStr(dt.Rows[0]["FullName"])) +
-                                  " — they will be invoiced and notified automatically.";
+                                  " &mdash; they will be invoiced and notified automatically.";
         }
 
         protected void btnRegister_Click(object sender, EventArgs e)
@@ -108,7 +108,7 @@ namespace ForteLogisticsApp.Ops
             litWaybill.Text = tracking;
             // Rendered inside a JavaScript string literal on the page.
             litBarcodeVal.Text = UiHelper.JsEnc(tracking);
-            litRoute.Text = ddlOrigin.SelectedValue + " → " + ddlDest.SelectedValue + " · " + Weight.ToString("0.##") + " kg";
+            litRoute.Text = ddlOrigin.SelectedValue + " &rarr; " + ddlDest.SelectedValue + " &middot; " + Weight.ToString("0.##") + " kg";
 
             lblStatus.CssClass = UiHelper.AlertClass("success");
             lblStatus.Text = "Parcel " + tracking + " registered successfully.";

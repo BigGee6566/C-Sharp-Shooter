@@ -108,7 +108,7 @@
                     </p>
 
                     <div class="flex justify-end">
-                        <asp:Button ID="btnNextAddress" runat="server" Text="Next: Addresses →" OnClick="btnNextAddress_Click" CssClass="fcl-btn" />
+                        <asp:Button ID="btnNextAddress" runat="server" Text="Next: Addresses ->" OnClick="btnNextAddress_Click" CssClass="fcl-btn" />
                     </div>
                 </asp:View>
 
@@ -166,8 +166,8 @@
                     </div>
 
                     <div class="flex justify-between items-center">
-                        <asp:Button ID="btnBackToParcel" runat="server" Text="← Back" OnClick="btnBackToParcel_Click" CssClass="fcl-btn fcl-btn-dark" />
-                        <asp:Button ID="btnNextPayment" runat="server" Text="Next: Recipient →" OnClick="btnNextPayment_Click" CssClass="fcl-btn" />
+                        <asp:Button ID="btnBackToParcel" runat="server" Text="<- Back" OnClick="btnBackToParcel_Click" CssClass="fcl-btn fcl-btn-dark" />
+                        <asp:Button ID="btnNextPayment" runat="server" Text="Next: Recipient ->" OnClick="btnNextPayment_Click" CssClass="fcl-btn" />
                     </div>
                 </asp:View>
 
@@ -236,7 +236,7 @@
                     </div>
 
                     <div class="flex justify-between items-center">
-                        <asp:Button ID="btnBackToAddresses" runat="server" Text="← Back" OnClick="btnBackToAddresses_Click" CssClass="fcl-btn fcl-btn-dark" />
+                        <asp:Button ID="btnBackToAddresses" runat="server" Text="<- Back" OnClick="btnBackToAddresses_Click" CssClass="fcl-btn fcl-btn-dark" />
                         <asp:Button ID="btnConfirmPayment" runat="server" Text="Confirm Booking" OnClick="btnConfirmPayment_Click" ValidationGroup="Book" CssClass="fcl-btn" />
                     </div>
                 </asp:View>
@@ -266,7 +266,7 @@
         <!-- Waybill Header -->
         <div class="flex justify-between items-start border-b-2 border-primary pb-4 mb-4">
             <div>
-                <h1 class="text-2xl font-black tracking-wider uppercase text-on-surface">LOGISTICORE</h1>
+                <img src='<%= ResolveUrl("~/Images/web/logo.png") %>' alt="Logisticore Courier Service" class="h-10 w-auto object-contain mb-1" />
                 <p class="text-xs text-on-surface-variant font-semibold">WAYBILL & PROOF OF DELIVERY</p>
             </div>
             <div class="text-right">

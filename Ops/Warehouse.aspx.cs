@@ -140,7 +140,7 @@ namespace ForteLogisticsApp.Ops
 
             string destCity = Db.ToStr(row["DestCity"]);
             litRoute.Text = Server.HtmlEncode(
-                Db.ToStr(row["OriginCity"]) + " → " + destCity + " · " +
+                Db.ToStr(row["OriginCity"]) + " -> " + destCity + " - " +
                 Db.ToDecimal(row["ParcelWeight"]).ToString("0.##") + " kg");
 
             string currentLane = Db.ToStr(row["SortCategory"]);
