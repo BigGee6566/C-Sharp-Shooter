@@ -51,7 +51,7 @@
                         <td class="py-2 pr-3"><%# ForteLogisticsApp.Services.UiHelper.StatusBadge(Eval("PaymentStatus").ToString()) %></td>
                         <td class="py-2 pr-3 text-on-surface-variant"><%# Eval("IssuedDate", "{0:dd MMM yyyy}") %></td>
                         <td class="py-2 pr-3">
-                            <a href='<%# ResolveUrl("~/Invoice.aspx?id=" + Eval("PaymentID")) %>' target="_blank" class="text-on-surface-variant hover:underline">View</a>
+                            <a href='<%# ResolveUrl("~/Invoice.aspx?id=" + Eval("PaymentID")) %>' class="text-on-surface-variant hover:underline">View</a>
                         </td>
                     </tr>
                 </ItemTemplate>
