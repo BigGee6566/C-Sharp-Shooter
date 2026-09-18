@@ -25,6 +25,11 @@
                             <asp:DropDownList ID="ddlVehicle" runat="server" CssClass="fcl-input"></asp:DropDownList>
                         </div>
                     </div>
+                    <div>
+                        <label class="block text-xs font-bold text-on-surface uppercase mb-1">Service Area *</label>
+                        <asp:DropDownList ID="ddlServiceArea" runat="server" CssClass="fcl-input"></asp:DropDownList>
+                        <p class="text-xs text-on-surface-variant mt-1">Only parcels destined for this lane can be allocated to the route.</p>
+                    </div>
                     <asp:Button ID="btnCreateRoute" runat="server" Text="Create Route" OnClick="btnCreateRoute_Click" CssClass="fcl-btn" />
                     <asp:Label ID="lblRouteMsg" runat="server" CssClass="block text-xs mt-1"></asp:Label>
                 </div>
@@ -35,7 +40,9 @@
                 <h2 class="font-bold text-lg text-brandDark mb-4"><span class="material-symbols-outlined text-brandRed mr-1">inventory</span> Allocate Parcels to a Route</h2>
                 <div class="mb-3">
                     <label class="block text-xs font-bold text-on-surface uppercase mb-1">Select Route</label>
-                    <asp:DropDownList ID="ddlRoute" runat="server" CssClass="fcl-input"></asp:DropDownList>
+                    <asp:DropDownList ID="ddlRoute" runat="server" CssClass="fcl-input"
+                        AutoPostBack="True" OnSelectedIndexChanged="ddlRoute_Changed"></asp:DropDownList>
+                    <p class="text-xs text-on-surface-variant mt-1"><asp:Literal ID="litRouteServiceArea" runat="server" /></p>
                 </div>
                 <%-- Filter to one sort lane, tick them all at once, then confirm with Assign. --%>
                 <div class="mb-3">
@@ -62,23 +69,35 @@
         <!-- Routes table -->
         <div class="fcl-card rounded-xl p-6 overflow-x-auto">
             <h2 class="font-bold text-lg text-brandDark mb-4">Active Routes</h2>
-            <asp:Repeater ID="rptRoutes" runat="server">
+            <asp:Repeater ID="rptRoutes" runat="server" OnItemCommand="rptRoutes_ItemCommand">
                 <HeaderTemplate>
                     <table class="w-full text-sm text-left">
                         <thead><tr class="text-xs uppercase text-on-surface-variant border-b">
-                            <th class="py-2 pr-3">Route</th><th class="py-2 pr-3">Driver</th>
+                            <th class="py-2 pr-3">Route</th><th class="py-2 pr-3">Service Area</th><th class="py-2 pr-3">Driver</th>
                             <th class="py-2 pr-3">Vehicle</th><th class="py-2 pr-3">Parcels</th>
-                            <th class="py-2 pr-3">Date</th><th class="py-2 pr-3">Status</th>
+                            <th class="py-2 pr-3">Date</th><th class="py-2 pr-3">Status</th><th class="py-2 pr-3"></th>
                         </tr></thead><tbody>
                 </HeaderTemplate>
                 <ItemTemplate>
                     <tr class="border-b border-outline-variant">
                         <td class="py-2 pr-3 font-semibold text-brandDark"><%# UiHelper.Enc(Eval("RouteName")) %></td>
+                        <td class="py-2 pr-3 text-on-surface-variant"><%# UiHelper.Enc(Eval("ServiceArea")) %></td>
                         <td class="py-2 pr-3"><%# UiHelper.Enc(Eval("DriverName")) %></td>
                         <td class="py-2 pr-3 text-on-surface-variant"><%# UiHelper.Enc(Eval("Vehicle")) %></td>
                         <td class="py-2 pr-3"><%# Eval("ParcelCount") %></td>
                         <td class="py-2 pr-3 text-on-surface-variant"><%# Eval("RouteDate", "{0:dd MMM yyyy}") %></td>
                         <td class="py-2 pr-3"><%# ForteLogisticsApp.Services.UiHelper.StatusBadge(Eval("Status").ToString()) %></td>
+                        <td class="py-2 pr-3 space-x-2 whitespace-nowrap">
+                            <asp:LinkButton runat="server" CommandName="toggle" CommandArgument='<%# Eval("RouteID") %>'
+                                Visible='<%# Eval("Status").ToString() != "Completed" %>'
+                                CssClass="text-on-surface-variant hover:underline"
+                                OnClientClick="return confirm('Change this route\'s status?');">
+                                <%# Eval("Status").ToString() == "Inactive" ? "Activate" : "Deactivate" %>
+                            </asp:LinkButton>
+                            <asp:LinkButton runat="server" CommandName="delete" CommandArgument='<%# Eval("RouteID") %>'
+                                CssClass="text-brandRed font-bold hover:underline"
+                                OnClientClick="return confirm('Delete this route? This is only possible if it has never carried a parcel.');">Delete</asp:LinkButton>
+                        </td>
                     </tr>
                 </ItemTemplate>
                 <FooterTemplate></tbody></table></FooterTemplate>

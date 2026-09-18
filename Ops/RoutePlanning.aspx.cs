@@ -10,13 +10,14 @@ namespace ForteLogisticsApp.Ops
     public partial class RoutePlanning : SecurePage
     {
         protected TextBox txtRouteName;
-        protected DropDownList ddlDriver, ddlVehicle, ddlRoute, ddlFilterCategory;
+        protected DropDownList ddlDriver, ddlVehicle, ddlRoute, ddlFilterCategory, ddlServiceArea;
         protected Button btnCreateRoute, btnAssign;
         protected LinkButton btnSelectAll;
         protected Label lblRouteMsg, lblAssignMsg;
         protected CheckBoxList cblParcels;
         protected Panel pnlNoParcels, pnlNoRoutes;
         protected Repeater rptRoutes;
+        protected Literal litRouteServiceArea;
 
         protected void Page_Load(object sender, EventArgs e)
         {
@@ -28,21 +29,53 @@ namespace ForteLogisticsApp.Ops
         {
             LoadDrivers();
             LoadVehicles();
+            LoadServiceAreaFilter(ddlServiceArea, false);
             LoadRoutesDropdown();
             LoadLaneFilter();
             LoadParcels();
             LoadRoutesTable();
             SuggestRouteName();
+            ShowRouteServiceArea();
         }
 
         private void LoadLaneFilter()
         {
-            ddlFilterCategory.Items.Clear();
-            ddlFilterCategory.Items.Add(new ListItem("All sort lanes", ""));
+            LoadServiceAreaFilter(ddlFilterCategory, true);
+        }
+
+        /// <summary>
+        /// Binds the fixed set of sort lanes/service areas. <paramref name="includeAny"/>
+        /// adds an "All" option, used for the parcel-picker filter but not for the
+        /// route-creation dropdown, which must always pin a route to exactly one area.
+        /// </summary>
+        private static void LoadServiceAreaFilter(DropDownList ddl, bool includeAny)
+        {
+            ddl.Items.Clear();
+            if (includeAny) ddl.Items.Add(new ListItem("All sort lanes", ""));
             foreach (string category in SortingService.Categories)
             {
-                ddlFilterCategory.Items.Add(new ListItem(category, category));
+                ddl.Items.Add(new ListItem(category, category));
             }
+        }
+
+        /// <summary>Shows the destination lane the currently-selected route is pinned to.</summary>
+        private void ShowRouteServiceArea()
+        {
+            if (ddlRoute.Items.Count == 0)
+            {
+                litRouteServiceArea.Text = string.Empty;
+                return;
+            }
+            int routeId = int.Parse(ddlRoute.SelectedValue);
+            string area = Db.ToStr(Db.Scalar("SELECT ServiceArea FROM dbo.[Route] WHERE RouteID = @r", "@r", routeId));
+            litRouteServiceArea.Text = area.Length > 0
+                ? "This route only accepts parcels destined for <strong>" + Server.HtmlEncode(area) + "</strong>."
+                : "This route has no service area set (created before this restriction was added) - any parcel may be assigned.";
+        }
+
+        protected void ddlRoute_Changed(object sender, EventArgs e)
+        {
+            ShowRouteServiceArea();
         }
 
         /// <summary>
@@ -98,7 +131,7 @@ namespace ForteLogisticsApp.Ops
 
         private void LoadRoutesDropdown()
         {
-            DataTable dt = Db.Query("SELECT RouteID, RouteName FROM dbo.[Route] WHERE Status <> 'Completed' ORDER BY RouteDate DESC");
+            DataTable dt = Db.Query("SELECT RouteID, RouteName FROM dbo.[Route] WHERE Status NOT IN ('Completed', 'Inactive') ORDER BY RouteDate DESC");
             ddlRoute.DataSource = dt;
             ddlRoute.DataTextField = "RouteName";
             ddlRoute.DataValueField = "RouteID";
@@ -132,10 +165,12 @@ namespace ForteLogisticsApp.Ops
         private void LoadRoutesTable()
         {
             DataTable dt = Db.Query(
-                @"SELECT r.RouteName, r.RouteDate, r.Status,
+                @"SELECT r.RouteID, r.RouteName, r.RouteDate, r.Status, ISNULL(r.ServiceArea, '(none)') AS ServiceArea,
                          ISNULL(u.FullName, '-') AS DriverName,
                          ISNULL(v.RegistrationNumber, '-') AS Vehicle,
-                         (SELECT COUNT(*) FROM dbo.[Shipment] s WHERE s.RouteID = r.RouteID) AS ParcelCount
+                         (SELECT COUNT(*) FROM dbo.[Shipment] s WHERE s.RouteID = r.RouteID) AS ParcelCount,
+                         (SELECT COUNT(*) FROM dbo.[Shipment] s WHERE s.RouteID = r.RouteID
+                            AND s.DeliveryStatus IN ('Assigned','OutForDelivery')) AS ActiveCount
                   FROM dbo.[Route] r
                   LEFT JOIN dbo.[User] u ON u.UserID = r.DriverID
                   LEFT JOIN dbo.[Vehicle] v ON v.VehicleID = r.VehicleID
@@ -143,6 +178,73 @@ namespace ForteLogisticsApp.Ops
             rptRoutes.DataSource = dt;
             rptRoutes.DataBind();
             pnlNoRoutes.Visible = dt.Rows.Count == 0;
+        }
+
+        protected void rptRoutes_ItemCommand(object source, RepeaterCommandEventArgs e)
+        {
+            int routeId;
+            if (!int.TryParse((string)e.CommandArgument, out routeId)) return;
+
+            if (e.CommandName == "toggle")
+            {
+                string current = Db.ToStr(Db.Scalar("SELECT Status FROM dbo.[Route] WHERE RouteID = @r", "@r", routeId));
+                if (current == "Completed")
+                {
+                    lblRouteMsg.CssClass = UiHelper.AlertClass("error") + " mt-1";
+                    lblRouteMsg.Text = "A completed route cannot be reactivated or deactivated.";
+                    LoadRoutesTable();
+                    return;
+                }
+
+                string next = current == "Inactive" ? "Active" : "Inactive";
+                Db.NonQuery(
+                    "UPDATE dbo.[Route] SET Status = @s, UpdatedBy = @u, UpdatedDate = GETDATE() WHERE RouteID = @r",
+                    "@s", next, "@u", UserId, "@r", routeId);
+                Db.NonQuery(
+                    @"INSERT INTO dbo.AuditLog (UserID, Action, Entity, EntityID, Details)
+                      VALUES (@u, 'Route.StatusChange', 'Route', @e, @d)",
+                    "@u", UserId, "@e", routeId.ToString(), "@d", "Status set to " + next);
+
+                lblRouteMsg.CssClass = UiHelper.AlertClass("success") + " mt-1";
+                lblRouteMsg.Text = "Route " + (next == "Active" ? "activated." : "deactivated - it no longer accepts new parcel assignments.");
+                LoadDrivers();
+                LoadRoutesDropdown();
+            }
+            else if (e.CommandName == "delete")
+            {
+                // The FK from Shipment.RouteID would refuse the DELETE anyway, but check first
+                // so the dispatcher gets a clear message instead of a raw SQL error, and so an
+                // in-progress (active) assignment is called out distinctly from mere history.
+                int activeCount = Db.ToInt(Db.Scalar(
+                    @"SELECT COUNT(*) FROM dbo.[Shipment]
+                      WHERE RouteID = @r AND DeliveryStatus IN ('Assigned','OutForDelivery')", "@r", routeId));
+                int totalCount = Db.ToInt(Db.Scalar(
+                    "SELECT COUNT(*) FROM dbo.[Shipment] WHERE RouteID = @r", "@r", routeId));
+
+                if (activeCount > 0)
+                {
+                    lblRouteMsg.CssClass = UiHelper.AlertClass("error") + " mt-1";
+                    lblRouteMsg.Text = activeCount + " parcel(s) on this route are still active. Reassign them to another route before deleting.";
+                }
+                else if (totalCount > 0)
+                {
+                    lblRouteMsg.CssClass = UiHelper.AlertClass("error") + " mt-1";
+                    lblRouteMsg.Text = "This route has shipment history and cannot be deleted. Deactivate it instead.";
+                }
+                else
+                {
+                    Db.NonQuery("DELETE FROM dbo.[Route] WHERE RouteID = @r", "@r", routeId);
+                    Db.NonQuery(
+                        @"INSERT INTO dbo.AuditLog (UserID, Action, Entity, EntityID, Details)
+                          VALUES (@u, 'Route.Deleted', 'Route', @e, 'Deleted - no parcels were ever assigned')",
+                        "@u", UserId, "@e", routeId.ToString());
+                    lblRouteMsg.CssClass = UiHelper.AlertClass("success") + " mt-1";
+                    lblRouteMsg.Text = "Route deleted.";
+                    LoadRoutesDropdown();
+                }
+            }
+
+            LoadRoutesTable();
         }
 
         /// <summary>Narrows the waiting parcels to one sort lane - one lane, one route.</summary>
@@ -171,14 +273,30 @@ namespace ForteLogisticsApp.Ops
                 lblRouteMsg.Text = "Add drivers and vehicles under Fleet first.";
                 return;
             }
+            if (ddlServiceArea.SelectedValue.Length == 0)
+            {
+                lblRouteMsg.CssClass = UiHelper.AlertClass("error") + " mt-1";
+                lblRouteMsg.Text = "Please choose the service area this route covers.";
+                return;
+            }
 
             int driverId = int.Parse(ddlDriver.SelectedValue);
             int vehicleId = int.Parse(ddlVehicle.SelectedValue);
+            string serviceArea = ddlServiceArea.SelectedValue;
+
+            if (Db.ToInt(Db.Scalar(
+                    "SELECT COUNT(*) FROM dbo.[Route] WHERE RouteName = @n AND Status <> 'Inactive'",
+                    "@n", txtRouteName.Text.Trim())) > 0)
+            {
+                lblRouteMsg.CssClass = UiHelper.AlertClass("error") + " mt-1";
+                lblRouteMsg.Text = "A route with that name already exists.";
+                return;
+            }
 
             Db.NonQuery(
-                @"INSERT INTO dbo.[Route] (RouteName, DriverID, VehicleID, Status)
-                  VALUES (@n, @d, @v, 'Active')",
-                "@n", txtRouteName.Text.Trim(), "@d", driverId, "@v", vehicleId);
+                @"INSERT INTO dbo.[Route] (RouteName, DriverID, VehicleID, Status, ServiceArea, CreatedBy)
+                  VALUES (@n, @d, @v, 'Active', @sa, @u)",
+                "@n", txtRouteName.Text.Trim(), "@d", driverId, "@v", vehicleId, "@sa", serviceArea, "@u", UserId);
 
             Db.NonQuery("UPDATE dbo.[Driver] SET AvailabilityStatus = 'On Route' WHERE UserID = @d", "@d", driverId);
 
@@ -201,13 +319,15 @@ namespace ForteLogisticsApp.Ops
             }
 
             int routeId = int.Parse(ddlRoute.SelectedValue);
-            DataTable route = Db.Query("SELECT DriverID, VehicleID FROM dbo.[Route] WHERE RouteID = @r", "@r", routeId);
+            DataTable route = Db.Query("SELECT DriverID, VehicleID, ServiceArea FROM dbo.[Route] WHERE RouteID = @r", "@r", routeId);
             if (route.Rows.Count == 0) return;
             int? driverId = route.Rows[0]["DriverID"] == DBNull.Value ? (int?)null : Db.ToInt(route.Rows[0]["DriverID"]);
             int? vehicleId = route.Rows[0]["VehicleID"] == DBNull.Value ? (int?)null : Db.ToInt(route.Rows[0]["VehicleID"]);
+            string routeServiceArea = Db.ToStr(route.Rows[0]["ServiceArea"]);
 
             int assigned = 0;
             int blocked = 0;
+            int mismatched = 0;
             foreach (ListItem item in cblParcels.Items)
             {
                 if (!item.Selected) continue;
@@ -215,11 +335,26 @@ namespace ForteLogisticsApp.Ops
 
                 // Re-verify at the write itself - the posted checkbox value is not trusted
                 // just because the list was filtered when it was rendered.
-                string gateStatus = Db.ToStr(Db.Scalar(
-                    "SELECT PaymentGateStatus FROM dbo.[Shipment] WHERE ShipmentID = @s", "@s", shipId));
+                DataTable ship = Db.Query(
+                    "SELECT PaymentGateStatus, SortCategory, DestCity FROM dbo.[Shipment] WHERE ShipmentID = @s", "@s", shipId);
+                if (ship.Rows.Count == 0) continue;
+
+                string gateStatus = Db.ToStr(ship.Rows[0]["PaymentGateStatus"]);
                 if (gateStatus != "NotRequired" && gateStatus != "PaymentSuccessful")
                 {
                     blocked++;
+                    continue;
+                }
+
+                // A route pinned to a service area (every route created since this check was
+                // added) may only carry parcels destined for that same lane - an East London
+                // parcel (SortCategory "Regional-Outlying") must never land on a Cape Town
+                // ("Metro-CPT") route. Routes with no ServiceArea predate this restriction and
+                // are left unrestricted rather than retroactively blocking their assignments.
+                string parcelLane = Db.ToStr(ship.Rows[0]["SortCategory"]);
+                if (routeServiceArea.Length > 0 && !string.Equals(parcelLane, routeServiceArea, StringComparison.OrdinalIgnoreCase))
+                {
+                    mismatched++;
                     continue;
                 }
 
@@ -248,12 +383,16 @@ namespace ForteLogisticsApp.Ops
                 assigned++;
             }
 
+            var notes = new System.Collections.Generic.List<string>();
+            if (blocked > 0) notes.Add(blocked + " skipped - awaiting customer payment");
+            if (mismatched > 0) notes.Add(mismatched + " skipped - destination does not match this route's service area (" + routeServiceArea + ")");
+            string noteText = notes.Count > 0 ? " " + string.Join("; ", notes) + "." : "";
+
             lblAssignMsg.CssClass = UiHelper.AlertClass(assigned > 0) + " mt-1";
             lblAssignMsg.Text = assigned > 0
-                ? assigned + " parcel(s) assigned to the driver for collection." +
-                  (blocked > 0 ? " " + blocked + " skipped - awaiting customer payment." : "")
-                : (blocked > 0
-                    ? blocked + " parcel(s) are awaiting customer payment and were not assigned."
+                ? assigned + " parcel(s) assigned to the driver for collection." + noteText
+                : (notes.Count > 0
+                    ? "No parcels were assigned." + noteText
                     : "Select at least one parcel to assign.");
             LoadParcels();
             LoadRoutesTable();

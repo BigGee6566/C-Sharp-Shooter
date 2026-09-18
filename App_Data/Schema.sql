@@ -470,3 +470,40 @@ UPDATE dbo.[Shipment]
  WHERE PaymentGateStatus = 'PaymentRequired'
    AND DeliveryStatus <> 'Registered';
 GO
+
+/* ============================================================
+   Route <-> destination service-area validation.
+
+   A route previously had no destination of its own, so nothing stopped an East London
+   parcel being assigned to a Cape Town route: assignment only filtered the parcel PICKER
+   by sort lane as a convenience, it never checked the chosen ROUTE. ServiceArea pins a
+   route to one of SortingService.Categories (the same lanes Warehouse sorting already
+   derives from Shipment.DestCity via SortingService.CategoryFor), and
+   Ops\RoutePlanning.aspx.cs now refuses to assign a parcel whose SortCategory does not
+   match the target route's ServiceArea.
+
+   NULL is kept legal only for routes created before this migration, so historical data is
+   never invalidated; Ops\RoutePlanning.aspx now requires a Service Area on every route it
+   creates going forward.
+   ============================================================ */
+IF COL_LENGTH('dbo.Route', 'ServiceArea') IS NULL
+    ALTER TABLE dbo.[Route] ADD ServiceArea NVARCHAR(60) NULL;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'CK_Route_ServiceArea')
+ALTER TABLE dbo.[Route] ADD CONSTRAINT CK_Route_ServiceArea
+    CHECK (ServiceArea IN ('Metro-JHB', 'Metro-CPT', 'Metro-DBN', 'Metro-PE', 'Regional-Outlying', 'Express-Priority'));
+GO
+
+/* Route management audit trail - who created/last changed a route, and when. */
+IF COL_LENGTH('dbo.Route', 'CreatedBy') IS NULL
+    ALTER TABLE dbo.[Route] ADD CreatedBy INT NULL REFERENCES dbo.[User](UserID);
+GO
+
+IF COL_LENGTH('dbo.Route', 'UpdatedBy') IS NULL
+    ALTER TABLE dbo.[Route] ADD UpdatedBy INT NULL REFERENCES dbo.[User](UserID);
+GO
+
+IF COL_LENGTH('dbo.Route', 'UpdatedDate') IS NULL
+    ALTER TABLE dbo.[Route] ADD UpdatedDate DATETIME NULL;
+GO
