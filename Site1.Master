@@ -6,7 +6,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Logisticore Courier Service</title>
-    <link rel="icon" type="image/jpeg" href="<%= ResolveUrl("~/Images/logisticore-logo.jpg") %>" />
+    <link rel="icon" type="image/jpeg" href="<%= ResolveUrl("~/Images/NEW%20LOGO%20LOGISTICORE.jpg") %>" />
 
     <!-- Tailwind CSS CDN (forms + container-queries plugins). Loaded once. -->
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
@@ -287,6 +287,19 @@
             font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
             color: #747684; padding: 12px 8px 4px;
         }
+
+        /* ---------------------------------------------------------------
+           Top navigation bar (landing page only).
+           The same .fcl-nav-link markup laid out horizontally: the sidebar's
+           solid blue active pill reads far too heavy in a bar, so inside
+           .fcl-topnav the active state becomes an underline instead.
+           --------------------------------------------------------------- */
+        .fcl-topnav .fcl-nav-link { padding: 8px 12px; }
+        .fcl-topnav .fcl-nav-link-active {
+            background: transparent; color: #002068;
+            box-shadow: inset 0 -2px 0 #002068; border-radius: 0;
+        }
+        .fcl-topnav .fcl-nav-link-active:hover { background: #e2e2e5; color: #002068; }
     </style>
 
     <asp:ContentPlaceHolder ID="HeadContent" runat="server">
@@ -296,10 +309,15 @@
     <form id="mainForm" runat="server" class="flex w-full h-full">
         <asp:ScriptManager ID="ScriptManager1" runat="server" />
 
-        <!-- SideNavBar -->
-        <nav id="sideNav" class="bg-surface-container-lowest h-screen w-64 fixed left-0 top-0 border-r border-outline-variant shadow-sm flex-col p-stack-md hidden md:flex z-50 overflow-y-auto no-scrollbar no-print">
+        <!-- SideNavBar: the portal chrome. Hidden on the landing page, which uses pnlTopNav instead. -->
+        <nav id="sideNav" runat="server" class="bg-surface-container-lowest h-screen w-64 fixed left-0 top-0 border-r border-outline-variant shadow-sm flex-col p-stack-md hidden md:flex z-50 overflow-y-auto no-scrollbar no-print">
             <div class="mb-stack-md">
-                <a href="<%= ResolveUrl("~/Default.aspx") %>" class="font-headline-md text-headline-md font-bold text-primary no-underline">LogistiCore</a>
+                <!-- Images/web/logo.png is the source artwork trimmed to the mark, with its grey
+                     studio ground keyed out to transparency, so it sits on any chrome colour. -->
+                <a href="<%= ResolveUrl("~/Default.aspx") %>" class="block no-underline">
+                    <img src='<%= ResolveUrl("~/Images/web/logo.png") %>' alt="LogistiCore Courier Service"
+                         class="h-10 w-auto object-contain" />
+                </a>
 
                 <asp:Panel ID="pnlAuthActions" runat="server" CssClass="mt-base flex items-center gap-base">
                     <span class="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center font-label-md text-label-md font-bold shrink-0">
@@ -312,9 +330,7 @@
                     </div>
                 </asp:Panel>
 
-                <asp:Panel ID="pnlAnonActions" runat="server" CssClass="mt-base">
-                    <p class="font-label-sm text-label-sm text-on-surface-variant">Courier &amp; supply chain services</p>
-                </asp:Panel>
+                <%-- The signed-out tagline that sat here is now part of the logo artwork itself. --%>
             </div>
 
             <div class="flex-1 space-y-1">
@@ -351,18 +367,95 @@
             </div>
         </nav>
 
-        <!-- Main Content Canvas -->
-        <main class="flex-1 ml-0 md:ml-64 overflow-y-auto relative h-full">
+        <!-- Main Content Canvas. RenderChrome() drops the md:ml-64 rail offset on the landing page. -->
+        <main id="mainCanvas" runat="server" class="flex-1 ml-0 md:ml-64 overflow-y-auto overflow-x-hidden relative h-full">
+
+            <!-- Top navigation bar: the landing page's chrome, in place of the side rail.
+                 It lives inside the main canvas because that element is the scroll container
+                 (body is h-screen overflow-hidden), so sticky top-0 pins it here and nowhere else. -->
+            <asp:Panel ID="pnlTopNav" runat="server"
+                CssClass="sticky top-0 z-50 bg-surface-container-lowest/90 backdrop-blur-md border-b border-outline-variant/40 shadow-sm no-print">
+                <div class="relative w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-12 flex items-center justify-between h-20 gap-6">
+
+                    <a href="<%= ResolveUrl("~/Default.aspx") %>" class="block no-underline shrink-0">
+                        <img src='<%= ResolveUrl("~/Images/web/logo.png") %>' alt="LogistiCore Courier Service"
+                             class="h-10 w-auto object-contain" />
+                    </a>
+
+                    <!-- Desktop: a horizontal row. Below md: a dropdown panel under the bar. -->
+                    <div id="topNavMenu"
+                         class="fcl-topnav hidden md:flex flex-col md:flex-row md:items-center md:flex-1 md:gap-1 gap-1
+                                absolute md:static left-0 right-0 top-full z-40
+                                bg-surface-container-lowest md:bg-transparent
+                                border-b md:border-0 border-outline-variant
+                                p-margin-mobile md:p-0 shadow-lg md:shadow-none">
+                        <asp:Literal ID="litTopNav" runat="server" />
+
+                        <!-- The right-hand cluster folds into the dropdown below md. -->
+                        <div class="md:hidden mt-stack-sm pt-stack-sm border-t border-outline-variant flex flex-col gap-1">
+                            <asp:Panel ID="pnlTopAuthMobile" runat="server" CssClass="flex flex-col gap-1">
+                                <asp:LinkButton ID="btnLogoutTopMobile" runat="server" OnClick="btnLogout_Click" CssClass="fcl-nav-link w-full text-left">
+                                    <span class="material-symbols-outlined">logout</span>
+                                    <span>Logout</span>
+                                </asp:LinkButton>
+                            </asp:Panel>
+                            <asp:Panel ID="pnlTopAnonMobile" runat="server" CssClass="flex flex-col gap-1">
+                                <a class="fcl-nav-link" href="<%= ResolveUrl("~/Login.aspx") %>">
+                                    <span class="material-symbols-outlined">lock_person</span>
+                                    <span>Portal Login</span>
+                                </a>
+                                <a class="fcl-nav-link" href="<%= ResolveUrl("~/Register.aspx") %>">
+                                    <span class="material-symbols-outlined">person_add</span>
+                                    <span>Register</span>
+                                </a>
+                            </asp:Panel>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-base shrink-0">
+                        <asp:Panel ID="pnlTopAuth" runat="server" CssClass="hidden md:flex items-center gap-base">
+                            <span class="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center font-label-md text-label-md font-bold shrink-0">
+                                <asp:Literal ID="litTopAvatar" runat="server" /></span>
+                            <span class="font-label-md text-label-md text-on-surface truncate max-w-[10rem]">
+                                <asp:Literal ID="litTopUserName" runat="server" /></span>
+                            <asp:LinkButton ID="btnLogoutTop" runat="server" OnClick="btnLogout_Click" CssClass="fcl-nav-link">
+                                <span class="material-symbols-outlined">logout</span>
+                                <span>Logout</span>
+                            </asp:LinkButton>
+                        </asp:Panel>
+
+                        <asp:Panel ID="pnlTopAnon" runat="server" CssClass="hidden md:flex items-center gap-base">
+                            <a class="fcl-nav-link" href="<%= ResolveUrl("~/Login.aspx") %>">
+                                <span class="material-symbols-outlined">lock_person</span>
+                                <span>Portal Login</span>
+                            </a>
+                            <a class="bg-primary text-on-primary font-label-md text-label-md font-bold px-4 py-2 rounded-DEFAULT no-underline hover:bg-primary-container transition-colors"
+                               href="<%= ResolveUrl("~/Register.aspx") %>">Register</a>
+                        </asp:Panel>
+
+                        <button type="button" class="md:hidden text-on-surface-variant hover:text-primary p-2 rounded-lg"
+                                onclick="toggleTopNav(this); return false;"
+                                aria-label="Toggle navigation" aria-controls="topNavMenu" aria-expanded="false">
+                            <span class="material-symbols-outlined ms-24">menu</span>
+                        </button>
+                    </div>
+                </div>
+            </asp:Panel>
+
             <!-- Mobile top bar: the sidebar is hidden below md, so this exposes the nav toggle. -->
-            <div class="md:hidden sticky top-0 z-40 flex items-center justify-between bg-surface-container-lowest border-b border-outline-variant px-margin-mobile py-base no-print">
-                <a href="<%= ResolveUrl("~/Default.aspx") %>" class="font-headline-md text-headline-md font-bold text-primary no-underline">LogistiCore</a>
+            <div id="divMobileBar" runat="server" class="md:hidden sticky top-0 z-40 flex items-center justify-between bg-surface-container-lowest border-b border-outline-variant px-margin-mobile py-base no-print">
+                <a href="<%= ResolveUrl("~/Default.aspx") %>" class="block no-underline">
+                    <img src='<%= ResolveUrl("~/Images/web/logo.png") %>' alt="LogistiCore Courier Service"
+                         class="h-9 w-auto object-contain" />
+                </a>
                 <button type="button" onclick="toggleSideNav(); return false;" aria-label="Toggle navigation"
                         class="text-on-surface-variant hover:text-primary p-2 rounded-lg">
                     <span class="material-symbols-outlined ms-24">menu</span>
                 </button>
             </div>
 
-            <div class="p-margin-mobile md:p-margin-desktop">
+            <!-- The landing page's own sections carry their gutters, so RenderChrome() clears this. -->
+            <div id="divContentPad" runat="server" class="p-margin-mobile md:p-margin-desktop">
                 <asp:ContentPlaceHolder ID="MainContent" runat="server">
                 </asp:ContentPlaceHolder>
             </div>
@@ -372,12 +465,45 @@
 
         <script>
             function toggleSideNav() {
-                var n = document.getElementById('sideNav');
+                // sideNav is runat="server", so the rendered id is the mangled ClientID.
+                var n = document.getElementById('<%= sideNav.ClientID %>');
                 if (!n) return;
                 // The sidebar is `hidden md:flex`; on mobile we swap `hidden` for `flex`.
                 if (n.classList.contains('hidden')) { n.classList.remove('hidden'); n.classList.add('flex'); }
                 else { n.classList.add('hidden'); n.classList.remove('flex'); }
             }
+
+            function closeTopNav() {
+                var m = document.getElementById('topNavMenu');
+                if (!m) return;
+                m.classList.add('hidden');
+                m.classList.remove('flex');
+                var b = document.querySelector('[aria-controls="topNavMenu"]');
+                if (b) b.setAttribute('aria-expanded', 'false');
+            }
+
+            function toggleTopNav(btn) {
+                var m = document.getElementById('topNavMenu');
+                if (!m) return;
+                // Same `hidden` / `flex` swap as the sidebar; below md the panel is the dropdown.
+                var opening = m.classList.contains('hidden');
+                if (opening) { m.classList.remove('hidden'); m.classList.add('flex'); }
+                else { m.classList.add('hidden'); m.classList.remove('flex'); }
+                if (btn) btn.setAttribute('aria-expanded', opening ? 'true' : 'false');
+            }
+
+            // Following a link should not leave the dropdown hanging open behind the new page,
+            // and widening past the md breakpoint must not leave `hidden` stripped off.
+            (function () {
+                var m = document.getElementById('topNavMenu');
+                if (!m) return;
+                m.addEventListener('click', function (e) {
+                    if (e.target.closest('a, button')) closeTopNav();
+                });
+                window.addEventListener('resize', function () {
+                    if (window.innerWidth >= 768) closeTopNav();
+                });
+            })();
         </script>
 
         <asp:ContentPlaceHolder ID="ScriptContent" runat="server">

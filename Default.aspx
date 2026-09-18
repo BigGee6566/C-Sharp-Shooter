@@ -280,40 +280,43 @@
         <!-- Main Content -->
         <main>
             <!-- Hero Section -->
-            <section class="relative min-h-[921px] flex items-center px-margin-desktop overflow-hidden">
+            <section class="relative min-h-[600px] lg:min-h-[900px] flex items-center overflow-hidden">
                 <div class="absolute inset-0 z-0">
                     <div class="absolute inset-0 bg-gradient-to-t from-surface via-surface/80 to-surface/40"></div>
                     <div class="absolute inset-0 bg-cover bg-center mix-blend-multiply opacity-10"
                          style="background-image: url('<%= ResolveUrl("~/Images/web/warehousing.jpg") %>')"></div>
                 </div>
-                <div class="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-20 w-full max-w-[1440px] mx-auto">
+                <!-- #track and #quote (below) must not become grid items themselves, or they'd
+                     eat a grid cell as empty <span>s - kept outside the grid, inside the section. -->
+                <span id="track"></span>
+                <span id="quote"></span>
+                <div class="relative z-10 w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-12 grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
                     <div class="flex flex-col justify-center">
-                        <h1 class="font-display-lg text-display-lg text-on-surface mb-6">
+                        <h1 class="font-display-lg text-3xl sm:text-4xl lg:text-5xl xl:text-display-lg text-on-surface mb-6">
                             PRECISION <br/> <span class="logo-gradient">IN MOTION.</span>
                         </h1>
-                        <p class="font-body-lg text-body-lg text-on-surface-variant max-w-lg mb-10">
+                        <p class="font-body-lg text-sm sm:text-base lg:text-body-lg text-on-surface-variant max-w-lg mb-10">
                             Next-gen courier and logistics infrastructure designed for global enterprises. We bridge the gap between complex supply chains and rapid-response delivery.
                         </p>
-                        <div class="flex gap-4">
-                            <a href="#services" class="px-8 py-4 primary-gradient-btn text-white font-bold uppercase tracking-widest text-label-sm rounded-xl flex items-center gap-2">
+                        <div class="flex flex-col sm:flex-row gap-3">
+                            <a href="#services" class="px-8 py-4 primary-gradient-btn text-white font-bold uppercase tracking-widest text-label-sm rounded-xl flex items-center justify-center gap-2">
                                 Explore Services <span class="material-symbols-outlined">arrow_forward</span>
                             </a>
-                            <a href="#solutions" class="px-8 py-4 border border-outline text-primary font-bold uppercase tracking-widest text-label-sm rounded-xl hover:bg-primary/5 transition-all flex items-center">
+                            <a href="#solutions" class="px-8 py-4 border border-outline text-primary font-bold uppercase tracking-widest text-label-sm rounded-xl hover:bg-primary/5 transition-all flex items-center justify-center">
                                 View Solutions
                             </a>
                         </div>
                     </div>
 
                     <!-- Hero Tool (Tabs Target Section).
-                         #track and #quote are the nav's deep links into the two tabs; applyHash()
-                         below selects the matching tab, since the tabs are not hash-driven. -->
-                    <span id="track"></span>
-                    <span id="quote"></span>
-                    <div class="flex flex-col justify-center" id="hero-tool">
-                        <div class="hero-glass p-8 rounded-3xl w-full max-w-xl self-end">
+                         #track and #quote (outside the grid above) are the nav's deep links into
+                         the two tabs; applyHash() below selects the matching tab, since the tabs
+                         are not hash-driven. -->
+                    <div class="flex flex-col justify-center w-full" id="hero-tool">
+                        <div class="hero-glass p-6 sm:p-8 rounded-3xl w-full max-w-xl mx-auto lg:mx-0 lg:ml-auto">
                             <div class="flex border-b border-outline-variant/30 mb-8">
-                                <button type="button" class="hero-tab flex-1 pb-4 font-headline-md text-headline-md tab-active transition-all" id="tab-track" onclick="switchTab('track')">Track Parcel</button>
-                                <button type="button" class="hero-tab flex-1 pb-4 font-headline-md text-headline-md text-outline transition-all" id="tab-quote" onclick="switchTab('quote')">Get Quote</button>
+                                <button type="button" class="hero-tab flex-1 pb-4 font-headline-md text-base sm:text-headline-md tab-active transition-all" id="tab-track" onclick="switchTab('track')">Track Parcel</button>
+                                <button type="button" class="hero-tab flex-1 pb-4 font-headline-md text-base sm:text-headline-md text-outline transition-all" id="tab-quote" onclick="switchTab('quote')">Get Quote</button>
                             </div>
 
                             <!-- Track Form -->
@@ -390,8 +393,8 @@
 
             <!-- Stats Section -->
             <section class="py-24 bg-surface-container-lowest relative">
-                <div class="max-w-[1440px] mx-auto px-margin-desktop">
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-12 text-on-surface">
+                <div class="w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-12">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 text-on-surface">
                         <div class="flex flex-col items-center text-center">
                             <span class="font-display-lg text-display-lg mb-2 text-primary">45+</span>
                             <span class="font-label-sm text-label-sm uppercase tracking-tighter text-outline">Operational Hubs</span>
@@ -413,14 +416,14 @@
             </section>
 
             <!-- Carousel Banner -->
-            <section class="relative h-[600px] w-full overflow-hidden">
+            <section class="relative h-[320px] sm:h-[450px] lg:h-[600px] w-full overflow-hidden">
                 <div class="flex transition-transform duration-700 ease-in-out h-full" id="carousel">
                     <div class="min-w-full h-full relative">
                         <div class="absolute inset-0 bg-cover bg-center" style="background-image: url('<%= ResolveUrl("~/Images/image.png") %>')"></div>
-                        <div class="absolute inset-0 bg-gradient-to-r from-surface to-transparent flex items-center px-margin-desktop">
+                        <div class="absolute inset-0 bg-gradient-to-r from-surface to-transparent flex items-center px-6 sm:px-10 lg:px-16">
                             <div class="max-w-xl">
-                                <h2 class="font-display-lg text-display-lg text-on-surface mb-4 uppercase">Fleet Excellence</h2>
-                                <p class="font-body-lg text-body-lg text-on-surface-variant mb-8">Operating the world's most advanced air and ground fleet for mission-critical shipments.</p>
+                                <h2 class="font-display-lg text-2xl sm:text-4xl lg:text-display-lg text-on-surface mb-4 uppercase">Fleet Excellence</h2>
+                                <p class="font-body-lg text-sm sm:text-base lg:text-body-lg text-on-surface-variant mb-8">Operating the world's most advanced air and ground fleet for mission-critical shipments.</p>
                                 <a href="#services" class="px-8 py-3 border-2 border-primary text-primary font-bold uppercase rounded-lg hover:bg-primary/10 inline-block">Learn More</a>
                             </div>
                         </div>
@@ -588,17 +591,17 @@
 
             <!-- Corporate / Solutions Target Section -->
             <section id="solutions" class="py-24 bg-surface-container">
-                <div class="max-w-[1440px] mx-auto px-margin-desktop">
-                    <div class="glass-panel p-12 rounded-3xl flex flex-col lg:flex-row items-center justify-between gap-12 overflow-hidden relative bg-surface-container-lowest">
+                <div class="w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-12">
+                    <div class="glass-panel p-6 sm:p-10 lg:p-12 rounded-3xl flex flex-col lg:flex-row items-start lg:items-center gap-8 overflow-hidden relative bg-surface-container-lowest">
                         <div class="absolute top-0 right-0 w-1/3 h-full opacity-5">
                             <span class="material-symbols-outlined text-[300px] translate-x-1/2 translate-y-1/4 text-primary">corporate_fare</span>
                         </div>
                         <div class="relative z-10 max-w-2xl">
-                            <h2 class="font-display-lg text-headline-lg text-on-surface mb-4 uppercase">Corporate Solutions</h2>
-                            <p class="font-body-lg text-body-lg text-on-surface-variant mb-0">Experience priority dispatch, bulk pricing, and dedicated account managers. Scale your logistics with our API-integrated platform.</p>
+                            <h2 class="font-display-lg text-3xl sm:text-4xl lg:text-5xl xl:text-headline-lg text-on-surface mb-4 uppercase">Corporate Solutions</h2>
+                            <p class="font-body-lg text-sm sm:text-base lg:text-body-lg text-on-surface-variant mb-0">Experience priority dispatch, bulk pricing, and dedicated account managers. Scale your logistics with our API-integrated platform.</p>
                         </div>
-                        <div class="relative z-10">
-                            <a href="<%= ResolveUrl("~/Register.aspx?role=Business") %>" class="px-12 py-5 primary-gradient-btn text-white font-bold uppercase tracking-widest text-label-sm rounded-xl inline-flex items-center justify-center">
+                        <div class="relative z-10 w-full lg:w-auto">
+                            <a href="<%= ResolveUrl("~/Register.aspx?role=Business") %>" class="w-full lg:w-auto px-12 py-5 primary-gradient-btn text-white font-bold uppercase tracking-widest text-label-sm rounded-xl inline-flex items-center justify-center">
                                 Register Business Account
                             </a>
                         </div>
