@@ -223,16 +223,20 @@ namespace ForteLogisticsApp.Services
             Db.RunInTransaction((conn, tx) =>
             {
                 // Duplicate submission of the exact same batch: return the original result
-                // instead of charging again.
+                // instead of charging again. Every allocation in one batch shares the same
+                // gateway reference (one charge for the whole batch), so any row's is correct.
                 DataTable already = Db.Query(conn, tx,
-                    @"SELECT COUNT(*) AS Cnt, SUM(AmountApplied) AS Total
-                      FROM dbo.PaymentAllocation WHERE BatchKey = @k", "@k", idempotencyKey);
+                    @"SELECT COUNT(*) AS Cnt, SUM(pa.AmountApplied) AS Total, MAX(p.ReferenceNumber) AS ReferenceNumber
+                      FROM dbo.PaymentAllocation pa
+                      JOIN dbo.[Payment] p ON p.PaymentID = pa.PaymentID
+                      WHERE pa.BatchKey = @k", "@k", idempotencyKey);
                 if (already.Rows.Count > 0 && Db.ToInt(already.Rows[0]["Cnt"]) > 0)
                 {
                     outcome = new BulkPaymentOutcome
                     {
                         Success = true,
                         Message = "Payment already completed.",
+                        ReferenceNumber = Db.ToStr(already.Rows[0]["ReferenceNumber"]),
                         InvoiceCount = Db.ToInt(already.Rows[0]["Cnt"]),
                         TotalAmount = Db.ToDecimal(already.Rows[0]["Total"])
                     };
