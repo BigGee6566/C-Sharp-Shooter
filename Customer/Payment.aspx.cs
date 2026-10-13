@@ -41,6 +41,9 @@ namespace ForteLogisticsApp.CustomerPortal
         protected TextBox txtCardExpiry;
         protected TextBox txtCardCvv;
         protected DropDownList ddlBank;
+        protected TextBox txtEftHolder;
+        protected TextBox txtEftAccount;
+        protected TextBox txtEftBranch;
         protected DropDownList ddlWallet;
         protected TextBox txtWalletPhone;
 
@@ -197,8 +200,18 @@ namespace ForteLogisticsApp.CustomerPortal
                     return null;
                 }
                 case "EFT":
-                    details = "EFT via " + ddlBank.SelectedValue;
+                {
+                    string holder = txtEftHolder.Text.Trim();
+                    string acct = DigitsOnly(txtEftAccount.Text);
+                    string branch = DigitsOnly(txtEftBranch.Text);
+
+                    if (holder.Length < 2) return "Please enter the account holder name.";
+                    if (acct.Length < 6 || acct.Length > 20) return "Please enter a valid account number.";
+                    if (branch.Length < 4 || branch.Length > 8) return "Please enter a valid branch code.";
+
+                    details = "EFT " + ddlBank.SelectedValue + " acct ****" + acct.Substring(acct.Length - 4);
                     return null;
+                }
                 case "Wallet":
                 {
                     string phone = DigitsOnly(txtWalletPhone.Text);

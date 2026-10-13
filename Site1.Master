@@ -16,6 +16,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
     <!-- JsBarcode (Code128 barcode rendering, used by the waybill step of Book Shipment) -->
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <!-- Leaflet + OpenStreetMap (live tracking map on Track and the driver Live Map) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <script id="tailwind-config">
         /* Design tokens ported from LogistiCoreV5 Site.Master tailwind config, 2026-08-31. */

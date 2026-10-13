@@ -25,6 +25,23 @@
                     </div>
                     <p class="text-sm text-on-surface-variant mb-5"><asp:Literal ID="litRoute" runat="server"></asp:Literal></p>
 
+                    <!-- Live map -->
+                    <asp:HiddenField ID="hfTrackWb" runat="server" />
+                    <div id="trackMapWrap" class="mb-6" style="display:none">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="text-xs font-bold uppercase text-on-surface-variant">Live Map</h3>
+                            <button type="button" id="btnShareLoc" class="text-xs font-semibold text-brandRed hover:underline inline-flex items-center gap-1">
+                                <span class="material-symbols-outlined text-sm">my_location</span> Share my location
+                            </button>
+                        </div>
+                        <div id="trackMap" style="height:300px;border-radius:12px;overflow:hidden;z-index:0;"></div>
+                        <div class="flex flex-wrap gap-4 mt-2 text-xs text-on-surface-variant">
+                            <span><span style="color:#003399;font-weight:700;">D</span> Destination</span>
+                            <span>&#128666; Driver</span>
+                            <span>&#128205; You</span>
+                        </div>
+                    </div>
+
                     <h3 class="text-xs font-bold uppercase text-on-surface-variant mb-3">Tracking History</h3>
                     <div class="relative border-l-2 border-outline-variant ml-2 pl-6 space-y-5">
                         <asp:Repeater ID="rptTimeline" runat="server">
@@ -88,4 +105,35 @@
             </div>
         </div>
     </div>
+
+    <script src='<%= ResolveUrl("~/Scripts/livetrack.js") %>'></script>
+    <script>
+        (function () {
+            var hf = document.getElementById('<%= hfTrackWb.ClientID %>');
+            var wb = hf ? hf.value : '';
+            if (!wb || !window.L) return;
+
+            var API = '<%= ResolveUrl("~/TrackApi.aspx") %>';
+            document.getElementById('trackMapWrap').style.display = '';
+            FclTrack.init('trackMap');
+            FclTrack.load({ apiUrl: API, wb: wb });
+
+            // Only the sender may share their own location.
+            fetch(API + '?wb=' + encodeURIComponent(wb), { credentials: 'same-origin' })
+                .then(function (r) { return r.json(); })
+                .then(function (d) {
+                    var b = document.getElementById('btnShareLoc');
+                    if (!d.ok || !d.mine) { b.style.display = 'none'; return; }
+                    var sharing = false;
+                    b.addEventListener('click', function () {
+                        if (!sharing) {
+                            if (FclTrack.startShare('Customer')) { sharing = true; b.innerHTML = '<span class="material-symbols-outlined text-sm">location_on</span> Stop sharing'; }
+                        } else {
+                            FclTrack.stopShare(); sharing = false;
+                            b.innerHTML = '<span class="material-symbols-outlined text-sm">my_location</span> Share my location';
+                        }
+                    });
+                }).catch(function () { });
+        })();
+    </script>
 </asp:Content>

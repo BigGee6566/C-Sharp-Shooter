@@ -1,4 +1,4 @@
-/* ============================================================
+﻿/* ============================================================
    Logisticore Courier Service - Database schema + seed
    Target: SQL Server Express  (Data Source = .\SQLEXPRESS)
 
@@ -507,3 +507,263 @@ GO
 IF COL_LENGTH('dbo.Route', 'UpdatedDate') IS NULL
     ALTER TABLE dbo.[Route] ADD UpdatedDate DATETIME NULL;
 GO
+
+/* ============================================================
+   Live-map position pings (driver + customer shared locations).
+   The Track page and the driver map READ the latest ping per
+   (ShipmentID, Role); TrackHandler.ashx WRITES them. One row per
+   role per shipment (upserted by the endpoint).
+   ============================================================ */
+IF OBJECT_ID('dbo.LocationPing', 'U') IS NULL
+CREATE TABLE dbo.LocationPing (
+    PingID      INT IDENTITY(1,1) PRIMARY KEY,
+    ShipmentID  INT NOT NULL REFERENCES dbo.[Shipment](ShipmentID),
+    Role        NVARCHAR(20) NOT NULL,          -- Driver, Customer
+    Lat         DECIMAL(9,6) NOT NULL,
+    Lng         DECIMAL(9,6) NOT NULL,
+    UpdatedDate DATETIME NOT NULL DEFAULT GETDATE()
+);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes
+               WHERE name = 'UX_LocationPing_Shipment_Role' AND object_id = OBJECT_ID('dbo.LocationPing'))
+CREATE UNIQUE INDEX UX_LocationPing_Shipment_Role ON dbo.LocationPing(ShipmentID, Role);
+GO
+
+/* ============================================================
+   BULK DEMO DATA  (idempotent: keyed on FCL-20000001, runs once)
+
+   198 shipments across the full lifecycle, each tied to a customer
+   (sender), a driver, a vehicle, a route (with ServiceArea), a parcel
+   size, a payment/invoice, tracking history, and - when delivered -
+   a rating. Tracking numbers are fixed so they can be documented:
+
+     150  Delivered           FCL-20000001 .. FCL-20000150
+      20  Upcoming (booked)   FCL-20000151 .. FCL-20000170
+      15  Awaiting collection FCL-20000171 .. FCL-20000185   (DeliveryStatus = Assigned)
+      13  Out for delivery    FCL-20000186 .. FCL-20000198   (DeliveryStatus = OutForDelivery)
+
+   All seeded logins share one password per role:
+     drivers   -> Driver@123       customers -> Customer@123
+   ============================================================ */
+IF NOT EXISTS (SELECT 1 FROM dbo.[Shipment] WHERE TrackingNumber = 'FCL-20000001')
+BEGIN
+    DECLARE @custHash NVARCHAR(200) = 'mOxlSo3yj48PjwIiBIPUaRa4UBfeC3TY7HVcKMuFOag='; -- Customer@123
+    DECLARE @drvHash  NVARCHAR(200) = 'OI/CLGhlBc6ItZ4qmx3u+T3JuFVYBXjqcEqjg9Y+4f0='; -- Driver@123
+
+    /* ---- Extra drivers (driver3@ .. driver8@); driver@/driver2@ already seeded ---- */
+    ;WITH D(idx, nm) AS (SELECT * FROM (VALUES
+        (3,'Bongani Nkosi'),(4,'Pieter van Wyk'),(5,'Fatima Patel'),
+        (6,'Lerato Modise'),(7,'Johan Botha'),(8,'Themba Zulu')) v(idx,nm))
+    INSERT INTO dbo.[User](FullName, Address, PhoneNumber, Password, Email, Role)
+    SELECT nm, 'Operations Depot, Johannesburg',
+           '0110' + RIGHT('000000' + CAST(idx AS VARCHAR(6)), 6), @drvHash,
+           'driver' + CAST(idx AS VARCHAR(6)) + '@fcl.co.za', 'Staff'
+    FROM D
+    WHERE NOT EXISTS (SELECT 1 FROM dbo.[User] u
+                      WHERE u.Email = 'driver' + CAST(D.idx AS VARCHAR(6)) + '@fcl.co.za');
+
+    /* Driver / Admin / Vehicle rows for every driverN that still lacks them */
+    INSERT INTO dbo.[Driver](UserID, LicenseNumber, EmployeeNumber, AvailabilityStatus)
+    SELECT u.UserID, 'DL-' + RIGHT('0000000' + CAST(u.UserID AS VARCHAR(10)), 7),
+           'EMP-' + CAST(1000 + u.UserID AS VARCHAR(10)), 'Available'
+    FROM dbo.[User] u
+    WHERE u.Email LIKE 'driver%@fcl.co.za'
+      AND NOT EXISTS (SELECT 1 FROM dbo.[Driver] d WHERE d.UserID = u.UserID);
+
+    INSERT INTO dbo.[Admin](UserID, Department)
+    SELECT u.UserID, 'Operations'
+    FROM dbo.[User] u
+    WHERE u.Email LIKE 'driver%@fcl.co.za'
+      AND NOT EXISTS (SELECT 1 FROM dbo.[Admin] a WHERE a.UserID = u.UserID);
+
+    INSERT INTO dbo.[Vehicle](DriverID, VehicleType, RegistrationNumber)
+    SELECT d.UserID,
+           CASE d.UserID % 3 WHEN 0 THEN 'Panel Van' WHEN 1 THEN '1-Ton Truck' ELSE 'Motorcycle' END,
+           'FCL ' + RIGHT('000' + CAST(d.UserID AS VARCHAR(6)), 3) + ' GP'
+    FROM dbo.[Driver] d
+    WHERE NOT EXISTS (SELECT 1 FROM dbo.[Vehicle] v WHERE v.DriverID = d.UserID);
+
+    /* ---- Customers (customer1@ .. customer30@); customer@ already seeded ---- */
+    ;WITH nums AS (SELECT TOP (30) ROW_NUMBER() OVER (ORDER BY (SELECT 1)) AS i FROM sys.all_objects)
+    INSERT INTO dbo.[User](FullName, Address, PhoneNumber, Password, Email, Role)
+    SELECT
+        CHOOSE(((i-1)%10)+1,'Sipho','Naledi','Kabelo','Zanele','Thabo','Aisha','Lwazi','Palesa','Riaan','Nandi')
+          + ' ' + CHOOSE(((i-1)%8)+1,'Mahlangu','Ndlovu','Pretorius','Khumalo','Naidoo','Mokoena','Jacobs','Sithole'),
+        CAST(((i*13)%95)+1 AS VARCHAR(6)) + ' '
+          + CHOOSE(((i-1)%5)+1,'Oak Ave','Main Rd','Church St','Kerk St','Beach Rd') + ', Johannesburg',
+        '082' + RIGHT('0000000' + CAST(i*37 AS VARCHAR(10)), 7),
+        @custHash, 'customer' + CAST(i AS VARCHAR(6)) + '@fcl.co.za', 'Customer'
+    FROM nums
+    WHERE NOT EXISTS (SELECT 1 FROM dbo.[User] u
+                      WHERE u.Email = 'customer' + CAST(nums.i AS VARCHAR(6)) + '@fcl.co.za');
+
+    INSERT INTO dbo.[Client](UserID, ClientType)
+    SELECT u.UserID, CASE WHEN u.UserID % 6 = 0 THEN 'Business' ELSE 'Individual' END
+    FROM dbo.[User] u
+    WHERE u.Role = 'Customer'
+      AND NOT EXISTS (SELECT 1 FROM dbo.[Client] c WHERE c.UserID = u.UserID);
+
+    /* ---- Ordered working sets for round-robin assignment ---- */
+    SELECT UserID, (ROW_NUMBER() OVER (ORDER BY UserID) - 1) AS idx
+      INTO #cust FROM dbo.[User] WHERE Role = 'Customer';
+    DECLARE @C INT = (SELECT COUNT(*) FROM #cust);
+
+    SELECT d.UserID,
+           (ROW_NUMBER() OVER (ORDER BY d.UserID) - 1) AS idx,
+           (SELECT TOP 1 v.VehicleID FROM dbo.[Vehicle] v WHERE v.DriverID = d.UserID ORDER BY v.VehicleID) AS VehicleID
+      INTO #drv FROM dbo.[Driver] d;
+    DECLARE @D INT = (SELECT COUNT(*) FROM #drv);
+
+    /* ---- Reference data: cities (with coordinates) and parcel sizes ---- */
+    DECLARE @cities TABLE (idx INT, City NVARCHAR(60), Area NVARCHAR(60), Lat DECIMAL(9,6), Lng DECIMAL(9,6));
+    INSERT INTO @cities VALUES
+        (0,'Cape Town',   'Metro-CPT',         -33.924870, 18.424055),
+        (1,'Durban',      'Metro-DBN',         -29.858680, 31.021840),
+        (2,'Gqeberha',    'Metro-PE',          -33.960800, 25.602200),
+        (3,'Bloemfontein','Regional-Outlying', -29.085200, 26.159900),
+        (4,'Pretoria',    'Regional-Outlying', -25.747900, 28.229300),
+        (5,'East London', 'Regional-Outlying', -33.015300, 27.911600);
+
+    DECLARE @sizes TABLE (idx INT, Nm NVARCHAR(30), Wt DECIMAL(10,2), L DECIMAL(6,1), W DECIMAL(6,1), H DECIMAL(6,1));
+    INSERT INTO @sizes VALUES
+        (0,'Small',2,25,20,10),(1,'Medium',5,40,30,20),(2,'Large',10,60,40,30),(3,'Extra-Large',25,80,60,50);
+
+    /* ---- Routes: two per destination service area, each with a driver + vehicle ---- */
+    DECLARE @areas TABLE (idx INT, Area NVARCHAR(60));
+    INSERT INTO @areas VALUES (0,'Metro-CPT'),(1,'Metro-DBN'),(2,'Metro-PE'),(3,'Regional-Outlying');
+
+    ;WITH R AS (SELECT a.idx AS aidx, a.Area, r2.rn FROM @areas a CROSS JOIN (VALUES (0),(1)) r2(rn))
+    INSERT INTO dbo.[Route](RouteName, DriverID, VehicleID, RouteDate, Status, ServiceArea)
+    SELECT R.Area + ' Run ' + CAST(R.rn + 1 AS VARCHAR(2)),
+           dr.UserID, dr.VehicleID,
+           CAST(DATEADD(day, -((R.aidx * 2 + R.rn) % 7), GETDATE()) AS DATE),
+           'Active', R.Area
+    FROM R
+    CROSS APPLY (SELECT UserID, VehicleID FROM #drv WHERE idx = (R.aidx * 2 + R.rn) % @D) dr;
+
+    SELECT RouteID, ServiceArea, DriverID,
+           (ROW_NUMBER() OVER (PARTITION BY ServiceArea ORDER BY RouteID) - 1) AS idx
+      INTO #rte FROM dbo.[Route] WHERE ServiceArea IS NOT NULL;
+
+    /* ---- 198 shipments ---- */
+    ;WITH N AS (SELECT TOP (198) ROW_NUMBER() OVER (ORDER BY (SELECT 1)) AS n FROM sys.all_objects),
+    G AS (
+        SELECT n,
+               CASE WHEN n <= 150 THEN 'Delivered'
+                    WHEN n <= 170 THEN CASE WHEN n % 2 = 0 THEN 'Sorted' ELSE 'Registered' END
+                    WHEN n <= 185 THEN 'Assigned'
+                    ELSE 'OutForDelivery' END AS Status,
+               (n - 1) % 6 AS cidx, (n - 1) % 4 AS sidx
+        FROM N
+    )
+    INSERT INTO dbo.[Shipment]
+        (SenderID, DriverID, PickupAddress, DeliveryAddress, ParcelWeight, ParcelDescription, Barcode,
+         TrackingNumber, ShipmentDate, DeliveryDate, CollectedDate, DeliveryStatus,
+         ReceiverName, ReceiverPhone, OriginCity, DestCity, Cost, RouteID, SortCategory,
+         WarehouseStatus, ExceptionType, ParcelLengthCm, ParcelWidthCm, ParcelHeightCm,
+         LastStatusChange, PaymentGateStatus, AttemptCount)
+    SELECT
+        cu.UserID,
+        CASE WHEN g.Status IN ('Delivered','Assigned','OutForDelivery') THEN rt.DriverID ELSE NULL END,
+        '12 Main Rd, Forte Town, Johannesburg',
+        CAST(((g.n * 7) % 90) + 1 AS VARCHAR(4)) + ' '
+          + CHOOSE((g.n % 5) + 1,'Long St','Smith St','Govan Mbeki Ave','Maitland St','Oxford Rd') + ', ' + ci.City,
+        sz.Wt,
+        CHOOSE((g.n % 6) + 1,'Documents','Boxed clothing','Electronics','Books','Spare parts','Homeware'),
+        'FCL-2000' + RIGHT('0000' + CAST(g.n AS VARCHAR(6)), 4),
+        'FCL-2000' + RIGHT('0000' + CAST(g.n AS VARCHAR(6)), 4),
+        CASE g.Status
+            WHEN 'Delivered'      THEN DATEADD(day,  -((g.n % 55) + 5), GETDATE())
+            WHEN 'OutForDelivery' THEN DATEADD(hour, -((g.n % 20) + 4), GETDATE())
+            WHEN 'Assigned'       THEN DATEADD(hour, -((g.n % 30) + 2), GETDATE())
+            ELSE                       DATEADD(hour, -((g.n % 48) + 1), GETDATE()) END,
+        CASE WHEN g.Status = 'Delivered' THEN DATEADD(day, -((g.n % 55) + 2), GETDATE()) ELSE NULL END,
+        CASE WHEN g.Status = 'Delivered'      THEN DATEADD(day,  -((g.n % 55) + 4), GETDATE())
+             WHEN g.Status = 'OutForDelivery' THEN DATEADD(hour, -((g.n % 10) + 1), GETDATE()) ELSE NULL END,
+        g.Status,
+        CHOOSE((g.n % 8) + 1,'Nomvula Sithole','Peter Adams','Lerato Mphela','Kyle Daniels',
+                             'Aisha Khan','Sibusiso Ngema','Megan Fourie','Tshepo Radebe'),
+        '083' + RIGHT('0000000' + CAST(g.n * 53 AS VARCHAR(10)), 7),
+        'Johannesburg', ci.City,
+        145 + CASE WHEN sz.Wt > 2 THEN (sz.Wt - 2) * 18 ELSE 0 END,
+        CASE WHEN g.Status IN ('Delivered','Assigned','OutForDelivery') THEN rt.RouteID ELSE NULL END,
+        ci.Area,
+        CASE g.Status WHEN 'Registered' THEN 'Pending' WHEN 'Sorted' THEN 'Sorted' ELSE 'Dispatched' END,
+        CASE WHEN g.n % 37 = 0 THEN 'Damaged' WHEN g.n % 53 = 0 THEN 'Lost' ELSE 'None' END,
+        sz.L, sz.W, sz.H,
+        CASE WHEN g.Status = 'Delivered' THEN DATEADD(day, -((g.n % 55) + 2), GETDATE())
+             ELSE DATEADD(hour, -((g.n % 12) + 1), GETDATE()) END,
+        'NotRequired', 0
+    FROM G
+        JOIN @cities ci ON ci.idx = g.cidx
+        JOIN @sizes  sz ON sz.idx = g.sidx
+        CROSS APPLY (SELECT UserID FROM #cust WHERE idx = (g.n - 1) % @C) cu
+        OUTER APPLY (SELECT TOP 1 RouteID, DriverID FROM #rte
+                     WHERE ServiceArea = ci.Area AND idx = ((g.n - 1) / 6) % 2) rt;
+
+    /* ---- One invoice/payment per seeded shipment ---- */
+    ;WITH P AS (
+        SELECT s.ShipmentID, s.SenderID, s.Cost, s.DeliveryStatus, s.ShipmentDate,
+               ROW_NUMBER() OVER (ORDER BY s.ShipmentID) AS rn
+        FROM dbo.[Shipment] s
+        WHERE s.TrackingNumber LIKE 'FCL-2000%'
+          AND NOT EXISTS (SELECT 1 FROM dbo.[Payment] p WHERE p.ShipmentID = s.ShipmentID)
+    )
+    INSERT INTO dbo.[Payment](ClientID, PaymentStatus, PaymentMethod, ReferenceNumber,
+                              InvoiceNumber, ShipmentID, Amount, IssuedDate, DueDate)
+    SELECT P.SenderID,
+           CASE WHEN P.DeliveryStatus IN ('Delivered','OutForDelivery','Assigned') THEN 'Paid' ELSE 'Unpaid' END,
+           CASE WHEN P.DeliveryStatus IN ('Delivered','OutForDelivery','Assigned')
+                THEN CHOOSE((P.rn % 3) + 1,'Card','EFT','Wallet') ELSE NULL END,
+           CASE WHEN P.DeliveryStatus IN ('Delivered','OutForDelivery','Assigned')
+                THEN 'PAYSEED-' + RIGHT('0000' + CAST(P.rn AS VARCHAR(6)), 4) ELSE NULL END,
+           'INV-2000' + RIGHT('0000' + CAST(P.rn AS VARCHAR(6)), 4),
+           P.ShipmentID, P.Cost, P.ShipmentDate, DATEADD(day, 7, P.ShipmentDate)
+    FROM P;
+
+    /* ---- Tracking history: the lifecycle stages reached so far ---- */
+    INSERT INTO dbo.[TrackingHistory](ShipmentID, DriverID, Location, Status, Remarks, [Timestamp])
+    SELECT s.ShipmentID, s.DriverID, t.Loc, t.St, t.Rm, DATEADD(hour, t.Ord, s.ShipmentDate)
+    FROM dbo.[Shipment] s
+    CROSS APPLY (VALUES
+        ('Johannesburg Depot',          'Registered',     'Parcel registered at intake',                 0),
+        ('Johannesburg Warehouse',      'Sorted',         'Sorted to ' + s.SortCategory + ' lane',       2),
+        ('Dispatch Bay, Johannesburg',  'Assigned',       'Allocated to a delivery route',               4),
+        ('En route to ' + s.DestCity,   'OutForDelivery', 'Parcel collected - out for delivery',         6),
+        (s.DestCity,                    'Delivered',      'Delivered - signed by recipient',            48)
+    ) t(Loc, St, Rm, Ord)
+    WHERE s.TrackingNumber LIKE 'FCL-2000%'
+      AND ( t.St = 'Registered'
+         OR (t.St = 'Sorted'         AND s.DeliveryStatus IN ('Sorted','Assigned','OutForDelivery','Delivered'))
+         OR (t.St = 'Assigned'       AND s.DeliveryStatus IN ('Assigned','OutForDelivery','Delivered'))
+         OR (t.St = 'OutForDelivery' AND s.DeliveryStatus IN ('OutForDelivery','Delivered'))
+         OR (t.St = 'Delivered'      AND s.DeliveryStatus = 'Delivered') );
+
+    /* ---- Ratings on a third of delivered shipments ---- */
+    INSERT INTO dbo.[Rating](ClientID, DriverID, Comment, RatingScore, CreatedDate)
+    SELECT s.SenderID, s.DriverID,
+           CHOOSE((s.ShipmentID % 4) + 1,'Fast and professional.','Parcel arrived safely.',
+                                         'Great service, thank you.','On time - will use again.'),
+           3 + (s.ShipmentID % 3),
+           s.DeliveryDate
+    FROM dbo.[Shipment] s
+    WHERE s.TrackingNumber LIKE 'FCL-2000%' AND s.DeliveryStatus = 'Delivered'
+      AND s.DriverID IS NOT NULL AND s.ShipmentID % 3 = 0;
+
+    /* ---- Seed a mid-route driver ping for every out-for-delivery parcel ---- */
+    INSERT INTO dbo.LocationPing(ShipmentID, Role, Lat, Lng, UpdatedDate)
+    SELECT s.ShipmentID, 'Driver', (-26.204100 + ci.Lat) / 2.0, (28.047300 + ci.Lng) / 2.0, GETDATE()
+    FROM dbo.[Shipment] s JOIN @cities ci ON ci.City = s.DestCity
+    WHERE s.TrackingNumber LIKE 'FCL-2000%' AND s.DeliveryStatus = 'OutForDelivery'
+      AND NOT EXISTS (SELECT 1 FROM dbo.LocationPing lp WHERE lp.ShipmentID = s.ShipmentID AND lp.Role = 'Driver');
+
+    /* ---- Drivers currently carrying an out-for-delivery parcel are On Route ---- */
+    UPDATE dbo.[Driver] SET AvailabilityStatus = 'On Route'
+    WHERE UserID IN (SELECT DISTINCT DriverID FROM dbo.[Shipment]
+                     WHERE DeliveryStatus = 'OutForDelivery' AND DriverID IS NOT NULL);
+
+    DROP TABLE #cust; DROP TABLE #drv; DROP TABLE #rte;
+END
+GO
+
