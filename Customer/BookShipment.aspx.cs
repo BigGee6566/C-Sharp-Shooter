@@ -1,4 +1,5 @@
 using System;
+using System.Text;
 using System.Web.UI.WebControls;
 using ForteLogisticsApp.Data;
 using ForteLogisticsApp.Security;
@@ -37,11 +38,13 @@ namespace ForteLogisticsApp.CustomerPortal
         protected HiddenField hfSelectedSize;
 
         protected TextBox txtPickupStreet;
-        protected DropDownList ddlPickupCity;
+        protected TextBox txtPickupCity;
         protected TextBox txtPickupPostal;
         protected TextBox txtDeliveryStreet;
-        protected DropDownList ddlDeliveryCity;
+        protected TextBox txtDeliveryCity;
         protected TextBox txtDeliveryPostal;
+        protected Literal litCityOptions;
+        protected Label lblAddrStatus;
 
         protected TextBox txtReceiver;
         protected TextBox txtReceiverPhone;
@@ -90,7 +93,7 @@ namespace ForteLogisticsApp.CustomerPortal
             get
             {
                 return CourierService.CalculateQuote(
-                    ddlPickupCity.SelectedValue, ddlDeliveryCity.SelectedValue, BilledWeight);
+                    txtPickupCity.Text.Trim(), txtDeliveryCity.Text.Trim(), BilledWeight);
             }
         }
 
@@ -119,11 +122,13 @@ namespace ForteLogisticsApp.CustomerPortal
             rptParcelSizes.DataSource = ParcelSize.All;
             rptParcelSizes.DataBind();
 
+            // The city fields are now type-or-pick: a <datalist> offers the known service
+            // cities as suggestions while still letting the customer type any other town we
+            // deliver to. Rebuilt on every load so the options survive a postback.
+            litCityOptions.Text = BuildCityOptions();
+
             if (!IsPostBack)
             {
-                SortingService.BindCities(ddlPickupCity);
-                SortingService.BindCities(ddlDeliveryCity, "Cape Town");
-
                 // Pre-fill collection from the address already on the account.
                 txtPickupStreet.Text = Db.ToStr(Db.Scalar(
                     "SELECT Address FROM dbo.[User] WHERE UserID = @u", "@u", UserId));
@@ -156,10 +161,25 @@ namespace ForteLogisticsApp.CustomerPortal
 
         protected void btnNextPayment_Click(object sender, EventArgs e)
         {
+            string pickupCity = txtPickupCity.Text.Trim();
+            string deliveryCity = txtDeliveryCity.Text.Trim();
+
+            // A blank city cannot be priced or sorted, and because the quote treats two equal
+            // cities (here, two empty strings) as a local delivery, an empty box would
+            // silently quote the cheaper local rate. Require both before moving on.
+            if (pickupCity.Length == 0 || deliveryCity.Length == 0)
+            {
+                lblAddrStatus.CssClass = UiHelper.AlertClass("error") + " block mb-3";
+                lblAddrStatus.Text = "Please enter both the collection and delivery city.";
+                return;
+            }
+            lblAddrStatus.Text = string.Empty;
+            lblAddrStatus.CssClass = "block mb-3";
+
             lblSummarySize.Text = SelectedSize.Name + " (" + SelectedSize.MaxWeightText.ToLowerInvariant() +
                                   ", " + SelectedSize.DimensionsText + ")";
-            lblSummaryPickup.Text = ddlPickupCity.SelectedValue;
-            lblSummaryDelivery.Text = ddlDeliveryCity.SelectedValue;
+            lblSummaryPickup.Text = pickupCity;
+            lblSummaryDelivery.Text = deliveryCity;
             lblSummaryTotal.Text = "R " + Quote.ToString("N2");
 
             mvBookShipment.SetActiveView(vwPayment);
@@ -176,8 +196,12 @@ namespace ForteLogisticsApp.CustomerPortal
         {
             if (!Page.IsValid) return;
 
+            string pickupCity = txtPickupCity.Text.Trim();
+            string deliveryCity = txtDeliveryCity.Text.Trim();
+
             if (txtPickupStreet.Text.Trim().Length == 0 ||
                 txtDeliveryStreet.Text.Trim().Length == 0 ||
+                pickupCity.Length == 0 || deliveryCity.Length == 0 ||
                 txtReceiver.Text.Trim().Length == 0)
             {
                 lblStatus.CssClass = UiHelper.AlertClass("error") + " mt-4";
@@ -188,8 +212,8 @@ namespace ForteLogisticsApp.CustomerPortal
             string trackingNumber = CourierService.GenerateTrackingNumber();
             decimal cost = Quote;
 
-            string pickupAddress = Join(txtPickupStreet.Text, ddlPickupCity.SelectedValue, txtPickupPostal.Text);
-            string deliveryAddress = Join(txtDeliveryStreet.Text, ddlDeliveryCity.SelectedValue, txtDeliveryPostal.Text);
+            string pickupAddress = Join(txtPickupStreet.Text, pickupCity, txtPickupPostal.Text);
+            string deliveryAddress = Join(txtDeliveryStreet.Text, deliveryCity, txtDeliveryPostal.Text);
 
             ParcelSize size = SelectedSize;
 
@@ -217,8 +241,8 @@ namespace ForteLogisticsApp.CustomerPortal
                 "@rp", txtReceiverPhone.Text.Trim(),
                 "@pu", pickupAddress,
                 "@da", deliveryAddress,
-                "@o", ddlPickupCity.SelectedValue,
-                "@d", ddlDeliveryCity.SelectedValue,
+                "@o", pickupCity,
+                "@d", deliveryCity,
                 "@w", size.MaxWeightKg,
                 "@len", size.LengthCm,
                 "@wid", size.WidthCm,
@@ -230,7 +254,7 @@ namespace ForteLogisticsApp.CustomerPortal
             Db.NonQuery(
                 @"INSERT INTO dbo.[TrackingHistory] (ShipmentID, Location, Status, Remarks)
                   VALUES (@s, @loc, 'Registered', 'Collection booked online by customer')",
-                "@s", shipmentId, "@loc", ddlPickupCity.SelectedValue + " (Booking)");
+                "@s", shipmentId, "@loc", pickupCity + " (Booking)");
 
             string invoiceNumber = CourierService.GenerateInvoiceNumber();
             Db.NonQuery(
@@ -268,11 +292,11 @@ namespace ForteLogisticsApp.CustomerPortal
             lblWaybillReceiverName.Text = txtReceiver.Text.Trim();
 
             lblWaybillPickupStreet.Text = txtPickupStreet.Text.Trim();
-            lblWaybillPickupCity.Text = ddlPickupCity.SelectedValue;
+            lblWaybillPickupCity.Text = pickupCity;
             lblWaybillPickupPostal.Text = txtPickupPostal.Text.Trim();
 
             lblWaybillDeliveryStreet.Text = txtDeliveryStreet.Text.Trim();
-            lblWaybillDeliveryCity.Text = ddlDeliveryCity.SelectedValue;
+            lblWaybillDeliveryCity.Text = deliveryCity;
             lblWaybillDeliveryPostal.Text = txtDeliveryPostal.Text.Trim();
 
             // JsBarcode (loaded by the master) renders the waybill locally, so the number
@@ -284,6 +308,23 @@ namespace ForteLogisticsApp.CustomerPortal
 
             mvBookShipment.SetActiveView(vwConfirmation);
             UpdateWizardIndicators(4);
+        }
+
+        /// <summary>
+        /// Builds the &lt;option&gt; list for the city datalist from the single source of
+        /// truth in SortingService. These are suggestions only - the customer may type any
+        /// other town - so the list is never used to validate or constrain the entry.
+        /// </summary>
+        private static string BuildCityOptions()
+        {
+            var sb = new StringBuilder();
+            foreach (string city in SortingService.Cities)
+            {
+                sb.Append("<option value=\"")
+                  .Append(UiHelper.Enc(city))
+                  .Append("\"></option>");
+            }
+            return sb.ToString();
         }
 
         private static string Join(string street, string city, string postal)

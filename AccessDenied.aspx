@@ -6,6 +6,6 @@
         <h1 class="text-3xl font-black text-brandDark mb-2">Access Denied</h1>
         <p class="text-on-surface-variant text-sm mb-6">You don't have permission to view this page with your current role.
             If you believe this is a mistake, please contact your administrator.</p>
-        <a href='<%= ResolveUrl("~/Default.aspx") %>' class="fcl-btn inline-block">Back to Home</a>
+        <a href='<%= HomeUrl %>' class="fcl-btn inline-block"><%= HomeText %></a>
     </section>
 </asp:Content>
