@@ -12,9 +12,9 @@
             </div>
 
             <div class="text-center mb-stack-md">
-                <div class="flex justify-center items-center gap-base mb-base">
-                    <span class="material-symbols-outlined ms-32 text-primary">local_shipping</span>
-                    <span class="font-headline-md text-headline-md font-bold text-primary">LogistiCore</span>
+                <div class="flex justify-center items-center mb-stack-sm">
+                    <img src='<%= ResolveUrl("~/Images/web/logo.png") %>' alt="LogistiCore Courier Service"
+                         class="h-12 w-auto object-contain" />
                 </div>
                 <h1 class="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface mb-2">Join LogistiCore</h1>
                 <p class="font-body-lg text-body-md text-on-surface-variant">Start shipping with precision and speed.</p>

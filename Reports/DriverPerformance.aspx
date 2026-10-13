@@ -3,7 +3,7 @@
 <asp:Content ID="c1" ContentPlaceHolderID="MainContent" runat="server">
     <div class="max-w-7xl mx-auto px-4 py-8">
         <div class="print-only mb-4" style="border-bottom:2px solid #00164e; padding-bottom:8px">
-            <img src='<%= ResolveUrl("~/Images/logisticore-logo.jpg") %>' alt="Logisticore" style="height:56px" />
+            <img src='<%= ResolveUrl("~/Images/web/logo.png") %>' alt="Logisticore" style="height:56px" />
             <div style="font-size:11px; color:#444">Logisticore Courier Service &middot; Isando, Gauteng &middot; 0860 LOGISTICORE &middot; support@logisticore.co.za</div>
             <div style="font-weight:800; font-size:16px; margin-top:4px; color:#00164e">Driver Performance Summary</div>
             <div style="font-size:11px; color:#444">Generated: <%= DateTime.Now.ToString("dd MMM yyyy HH:mm") %></div>

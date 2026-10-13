@@ -23,6 +23,9 @@ namespace ForteLogisticsApp
         /// <summary>ScriptManager1 control.</summary>
         protected global::System.Web.UI.ScriptManager ScriptManager1;
 
+        /// <summary>sideNav control.</summary>
+        protected global::System.Web.UI.HtmlControls.HtmlGenericControl sideNav;
+
         /// <summary>pnlAuthActions control.</summary>
         protected global::System.Web.UI.WebControls.Panel pnlAuthActions;
 
@@ -34,9 +37,6 @@ namespace ForteLogisticsApp
 
         /// <summary>litNavUserType control.</summary>
         protected global::System.Web.UI.WebControls.Literal litNavUserType;
-
-        /// <summary>pnlAnonActions control.</summary>
-        protected global::System.Web.UI.WebControls.Panel pnlAnonActions;
 
         /// <summary>litNav control.</summary>
         protected global::System.Web.UI.WebControls.Literal litNav;
@@ -52,6 +52,45 @@ namespace ForteLogisticsApp
 
         /// <summary>pnlAnonLinks control.</summary>
         protected global::System.Web.UI.WebControls.Panel pnlAnonLinks;
+
+        /// <summary>mainCanvas control.</summary>
+        protected global::System.Web.UI.HtmlControls.HtmlGenericControl mainCanvas;
+
+        /// <summary>pnlTopNav control.</summary>
+        protected global::System.Web.UI.WebControls.Panel pnlTopNav;
+
+        /// <summary>litTopNav control.</summary>
+        protected global::System.Web.UI.WebControls.Literal litTopNav;
+
+        /// <summary>pnlTopAuth control.</summary>
+        protected global::System.Web.UI.WebControls.Panel pnlTopAuth;
+
+        /// <summary>litTopAvatar control.</summary>
+        protected global::System.Web.UI.WebControls.Literal litTopAvatar;
+
+        /// <summary>litTopUserName control.</summary>
+        protected global::System.Web.UI.WebControls.Literal litTopUserName;
+
+        /// <summary>btnLogoutTop control.</summary>
+        protected global::System.Web.UI.WebControls.LinkButton btnLogoutTop;
+
+        /// <summary>pnlTopAnon control.</summary>
+        protected global::System.Web.UI.WebControls.Panel pnlTopAnon;
+
+        /// <summary>pnlTopAuthMobile control.</summary>
+        protected global::System.Web.UI.WebControls.Panel pnlTopAuthMobile;
+
+        /// <summary>btnLogoutTopMobile control.</summary>
+        protected global::System.Web.UI.WebControls.LinkButton btnLogoutTopMobile;
+
+        /// <summary>pnlTopAnonMobile control.</summary>
+        protected global::System.Web.UI.WebControls.Panel pnlTopAnonMobile;
+
+        /// <summary>divMobileBar control.</summary>
+        protected global::System.Web.UI.HtmlControls.HtmlGenericControl divMobileBar;
+
+        /// <summary>divContentPad control.</summary>
+        protected global::System.Web.UI.HtmlControls.HtmlGenericControl divContentPad;
 
         /// <summary>MainContent control.</summary>
         protected global::System.Web.UI.WebControls.ContentPlaceHolder MainContent;

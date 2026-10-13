@@ -10,7 +10,7 @@
         <asp:Panel ID="pnlInvoice" runat="server" CssClass="fcl-card rounded-xl p-8 bg-white">
             <div class="flex justify-between items-start border-b border-outline-variant pb-4 mb-6">
                 <div>
-                    <img src='<%= ResolveUrl("~/Images/logisticore-logo.jpg") %>' alt="Logisticore Courier Service" class="h-16 w-auto object-contain" />
+                    <img src='<%= ResolveUrl("~/Images/web/logo.png") %>' alt="Logisticore Courier Service" class="h-16 w-auto object-contain" />
                     <div class="text-xs text-on-surface-variant mt-1">Isando, Gauteng &middot; support@logisticore.co.za</div>
                 </div>
                 <div class="text-right">

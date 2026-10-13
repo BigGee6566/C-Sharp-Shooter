@@ -14,9 +14,9 @@
 
             <!-- Header / Logo -->
             <div class="text-center mb-stack-md">
-                <div class="flex justify-center items-center gap-base mb-base">
-                    <span class="material-symbols-outlined ms-32 text-primary">local_shipping</span>
-                    <span class="font-headline-md text-headline-md font-bold text-primary">LogistiCore</span>
+                <div class="flex justify-center items-center mb-stack-sm">
+                    <img src='<%= ResolveUrl("~/Images/web/logo.png") %>' alt="LogistiCore Courier Service"
+                         class="h-12 w-auto object-contain" />
                 </div>
                 <h2 class="font-headline-md text-headline-md text-on-surface">Welcome Back</h2>
                 <p class="font-body-md text-label-md text-on-surface-variant mt-1">Sign in to manage your shipments and track logistics in real time.</p>
