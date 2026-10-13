@@ -102,6 +102,9 @@
     <Content Include="Ops\RoutePlanning.aspx" />
     <Content Include="Driver\Dashboard.aspx" />
     <Content Include="Driver\DeliveryConfirmation.aspx" />
+    <Content Include="Driver\Map.aspx" />
+    <Content Include="TrackApi.aspx" />
+    <Content Include="Scripts\livetrack.js" />
     <Content Include="Finance\Dashboard.aspx" />
     <Content Include="Finance\Invoices.aspx" />
     <Content Include="Admin\Dashboard.aspx" />
@@ -147,6 +150,7 @@
     <Compile Include="Services\NotificationService.cs" />
     <Compile Include="Services\SortingService.cs" />
     <Compile Include="Services\UiHelper.cs" />
+    <Compile Include="Services\GeoService.cs" />
     <Compile Include="Services\ReportExport.cs" />
     <Compile Include="Services\PaymentGateway.cs" />
     <Compile Include="Services\PaymentService.cs" />
@@ -196,6 +200,14 @@
     </Compile>
     <Compile Include="Customer\Track.aspx.cs">
       <DependentUpon>Customer\Track.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="TrackApi.aspx.cs">
+      <DependentUpon>TrackApi.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Driver\Map.aspx.cs">
+      <DependentUpon>Driver\Map.aspx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>
     </Compile>
     <Compile Include="Customer\Profile.aspx.cs">

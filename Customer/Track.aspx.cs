@@ -17,6 +17,7 @@ namespace ForteLogisticsApp.CustomerPortal
         protected Repeater rptTimeline, rptMine;
         protected DropDownList ddlScore;
         protected HiddenField hfDriverId;
+        protected HiddenField hfTrackWb;
 
         protected void Page_Load(object sender, EventArgs e)
         {
@@ -89,6 +90,9 @@ namespace ForteLogisticsApp.CustomerPortal
             bool delivered = Db.ToStr(r["DeliveryStatus"]) == "Delivered" && r["DriverID"] != DBNull.Value;
             pnlRate.Visible = delivered;
             if (delivered) hfDriverId.Value = Db.ToStr(r["DriverID"]);
+
+            // Drive the live map (TrackApi reads positions for this waybill).
+            hfTrackWb.Value = Db.ToStr(r["TrackingNumber"]);
 
             pnlResult.Visible = true;
             lblMsg.Text = string.Empty;

@@ -57,7 +57,8 @@
                 </div>
             </div>
 
-            <!-- EFT details -->
+            <!-- EFT / bank transfer details. Account number is kept out of ViewState
+                 (EnableViewState="false"); only a masked summary is ever stored. -->
             <div id="pm-eft" class="fcl-pm-panel space-y-3 mb-4" style="display:none">
                 <div>
                     <label class="block text-label-sm font-semibold text-on-surface-variant mb-1" for="<%= ddlBank.ClientID %>">Your bank</label>
@@ -69,6 +70,20 @@
                         <asp:ListItem Text="Standard Bank" Value="Standard Bank" />
                         <asp:ListItem Text="TymeBank" Value="TymeBank" />
                     </asp:DropDownList>
+                </div>
+                <div>
+                    <label class="block text-label-sm font-semibold text-on-surface-variant mb-1" for="<%= txtEftHolder.ClientID %>">Account holder</label>
+                    <asp:TextBox ID="txtEftHolder" runat="server" CssClass="fcl-input w-full" autocomplete="off" placeholder="Name on the account" />
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-label-sm font-semibold text-on-surface-variant mb-1" for="<%= txtEftAccount.ClientID %>">Account number</label>
+                        <asp:TextBox ID="txtEftAccount" runat="server" CssClass="fcl-input w-full" MaxLength="20" EnableViewState="false" autocomplete="off" inputmode="numeric" placeholder="1234567890" />
+                    </div>
+                    <div>
+                        <label class="block text-label-sm font-semibold text-on-surface-variant mb-1" for="<%= txtEftBranch.ClientID %>">Branch code</label>
+                        <asp:TextBox ID="txtEftBranch" runat="server" CssClass="fcl-input w-full" MaxLength="8" autocomplete="off" inputmode="numeric" placeholder="250655" />
+                    </div>
                 </div>
                 <p class="text-xs text-on-surface-variant">A unique payment reference is generated for your transfer once you confirm.</p>
             </div>
@@ -154,6 +169,10 @@
                 var now = new Date(), yr = 2000 + (+m[2]), exd = new Date(yr, +m[1], 1);
                 if (exd <= now) return warn('That card has expired.');
                 if (!/^\d{3,4}$/.test(val('<%= txtCardCvv.ClientID %>'))) return warn('Please enter the 3 or 4 digit CVV.');
+            } else if (method === 'EFT') {
+                if (val('<%= txtEftHolder.ClientID %>').length < 2) return warn('Please enter the account holder name.');
+                if (!/^\d{6,20}$/.test(val('<%= txtEftAccount.ClientID %>').replace(/\s/g, ''))) return warn('Please enter a valid account number.');
+                if (!/^\d{4,8}$/.test(val('<%= txtEftBranch.ClientID %>').replace(/\s/g, ''))) return warn('Please enter a valid branch code.');
             } else if (method === 'Wallet') {
                 var phone = val('<%= txtWalletPhone.ClientID %>').replace(/[\s-]/g, '');
                 if (!/^\+?\d{9,15}$/.test(phone)) return warn('Please enter the mobile number for your wallet.');

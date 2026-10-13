@@ -306,6 +306,7 @@ namespace ForteLogisticsApp
                         AddSection(sb, "My Deliveries");
                         AddLink(sb, "~/Driver/Dashboard.aspx", "assignment", "My Manifest");
                         AddLink(sb, "~/Driver/DeliveryConfirmation.aspx", "task_alt", "Confirm Delivery");
+                        AddLink(sb, "~/Driver/Map.aspx", "map", "Live Map");
                     }
 
                     AddSection(sb, "Reports");
