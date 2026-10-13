@@ -130,8 +130,8 @@
                                 </div>
                                 <div class="grid grid-cols-2 gap-2">
                                     <div>
-                                        <label class="block text-xs font-semibold text-on-surface-variant mb-1">City</label>
-                                        <asp:DropDownList ID="ddlPickupCity" runat="server" CssClass="fcl-input" />
+                                        <label class="block text-xs font-semibold text-on-surface-variant mb-1" for="<%= txtPickupCity.ClientID %>">City</label>
+                                        <asp:TextBox ID="txtPickupCity" runat="server" CssClass="fcl-input" list="cityOptions" autocomplete="off" placeholder="Select or type a city" />
                                     </div>
                                     <div>
                                         <label class="block text-xs font-semibold text-on-surface-variant mb-1">Postal Code</label>
@@ -153,8 +153,8 @@
                                 </div>
                                 <div class="grid grid-cols-2 gap-2">
                                     <div>
-                                        <label class="block text-xs font-semibold text-on-surface-variant mb-1">City</label>
-                                        <asp:DropDownList ID="ddlDeliveryCity" runat="server" CssClass="fcl-input" />
+                                        <label class="block text-xs font-semibold text-on-surface-variant mb-1" for="<%= txtDeliveryCity.ClientID %>">City</label>
+                                        <asp:TextBox ID="txtDeliveryCity" runat="server" CssClass="fcl-input" list="cityOptions" autocomplete="off" placeholder="Select or type a city" />
                                     </div>
                                     <div>
                                         <label class="block text-xs font-semibold text-on-surface-variant mb-1">Postal Code</label>
@@ -164,6 +164,12 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Shared suggestions for both city fields. A datalist lets the customer
+                         pick a known city OR type any other destination we deliver to. -->
+                    <datalist id="cityOptions"><asp:Literal ID="litCityOptions" runat="server" /></datalist>
+
+                    <asp:Label ID="lblAddrStatus" runat="server" CssClass="block mb-3" />
 
                     <div class="flex justify-between items-center">
                         <asp:Button ID="btnBackToParcel" runat="server" Text="<- Back" OnClick="btnBackToParcel_Click" CssClass="fcl-btn fcl-btn-dark" />

@@ -41,10 +41,16 @@ namespace ForteLogisticsApp.Services
         /// mint a fresh key per genuine attempt (e.g. one per page load / per Retry click).
         /// </summary>
         public static PaymentOutcome PayForShipment(
-            int shipmentId, int clientUserId, string method, string testNote, string idempotencyKey)
+            int shipmentId, int clientUserId, string method, string testNote, string idempotencyKey,
+            string methodDetails = null)
         {
             if (string.IsNullOrWhiteSpace(idempotencyKey))
                 throw new ArgumentException("An idempotency key is required.", "idempotencyKey");
+
+            // A masked, non-sensitive descriptor (e.g. "Card ending 4242") supplied by the
+            // caller. Never a raw card number or CVV - those are validated at the page and
+            // discarded there, and must never reach the database.
+            string methodLabel = string.IsNullOrWhiteSpace(methodDetails) ? method : methodDetails;
 
             PaymentOutcome outcome = null;
 
@@ -138,13 +144,13 @@ namespace ForteLogisticsApp.Services
                         @"INSERT INTO dbo.[TrackingHistory] (ShipmentID, Location, Status, Remarks)
                           VALUES (@s, 'Online Payment', 'PaymentSuccessful', @rm)",
                         "@s", shipmentId,
-                        "@rm", "Payment received via sandbox gateway (" + method + "), ref " + result.ReferenceNumber);
+                        "@rm", "Payment received via sandbox gateway (" + methodLabel + "), ref " + result.ReferenceNumber);
 
                     Db.NonQuery(conn, tx,
                         @"INSERT INTO dbo.AuditLog (UserID, Action, Entity, EntityID, Details)
                           VALUES (@u, 'Payment.Success', 'Shipment', @e, @d)",
                         "@u", clientUserId, "@e", shipmentId.ToString(),
-                        "@d", "Invoice " + invoiceNumber + " paid, ref " + result.ReferenceNumber);
+                        "@d", "Invoice " + invoiceNumber + " paid (" + methodLabel + "), ref " + result.ReferenceNumber);
 
                     outcome = new PaymentOutcome
                     {

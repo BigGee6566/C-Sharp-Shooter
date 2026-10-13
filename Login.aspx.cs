@@ -27,7 +27,8 @@ namespace ForteLogisticsApp
             // Already signed in - go straight to the right dashboard.
             if (Session["UserID"] != null)
             {
-                Response.Redirect(ResolveUrl(AuthService.DashboardUrl(Session["Role"] as string)));
+                Response.Redirect(ResolveUrl(AuthService.DashboardUrl(
+                    Session["Role"] as string, SecurePage.CurrentUserId())));
                 return;
             }
 
@@ -59,14 +60,12 @@ namespace ForteLogisticsApp
 
             if (wantsStaffPortal && isCustomer)
             {
-                Session.Clear();
-                ShowStatus("error", "That account is a customer account. Please use the Client Portal tab.");
+                RejectPortalMismatch("That account is a customer account. Please use the Client Portal tab.");
                 return;
             }
             if (!wantsStaffPortal && !isCustomer)
             {
-                Session.Clear();
-                ShowStatus("error", "That is a staff account. Please use the Staff Portal tab.");
+                RejectPortalMismatch("That is a staff account. Please use the Staff Portal tab.");
                 return;
             }
 
@@ -77,8 +76,30 @@ namespace ForteLogisticsApp
             }
             else
             {
-                Response.Redirect(ResolveUrl(AuthService.DashboardUrl(role)));
+                Response.Redirect(ResolveUrl(AuthService.DashboardUrl(role, SecurePage.CurrentUserId())));
             }
+        }
+
+        /// <summary>
+        /// Rejects a sign-in because the portal tab the visitor chose does not match the
+        /// account's real role.
+        ///
+        /// By this point AuthService.Login has already succeeded: it populated the session
+        /// AND rotated the CSRF token. We are undoing that sign-in, so we drop the identity
+        /// keys - but we must NOT call Session.Clear(). BasePage binds this form's
+        /// ViewStateUserKey to Session["CsrfToken"] at OnInit; clearing (or leaving rotated)
+        /// that token means the form we are about to re-render is signed with one value while
+        /// the NEXT postback is validated against another, so ViewState MAC validation throws
+        /// and the page appears to crash on the second attempt. Restoring CsrfToken to the
+        /// key this response is actually signed with keeps a retry working.
+        /// </summary>
+        private void RejectPortalMismatch(string message)
+        {
+            Session.Remove("UserID");
+            Session.Remove("FullName");
+            Session.Remove("Role");
+            Session["CsrfToken"] = ViewStateUserKey;
+            ShowStatus("error", message);
         }
 
         private void ShowStatus(string kind, string message)

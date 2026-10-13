@@ -108,14 +108,27 @@ namespace ForteLogisticsApp.Services
             session["LoginLockedUntil"] = null;
         }
 
-        public static string DashboardUrl(string role)
+        /// <summary>
+        /// The landing page for a role after sign-in.
+        ///
+        /// For Staff, <paramref name="userId"/> decides between the two kinds of staff: a
+        /// driver (a Staff user with a row in dbo.[Driver]) lands on their own delivery
+        /// manifest, while office operations staff land on the Ops dashboard. Landing a
+        /// driver on Ops is wrong because every quick-action on that page (Warehouse, Route
+        /// Planning, Parcel Registration) is gated by RequireOperationsStaff and bounces a
+        /// driver straight to AccessDenied - the "dead links" drivers reported. When no
+        /// userId is supplied (0) the role alone is used, so Staff falls back to Ops.
+        /// </summary>
+        public static string DashboardUrl(string role, int userId = 0)
         {
             switch (role)
             {
                 case "Customer": return "~/Customer/Dashboard.aspx";
                 case "Admin":    return "~/Admin/Dashboard.aspx";
-                // Drivers are Staff; they land on Ops and reach their manifest from the nav.
-                case "Staff":    return "~/Ops/Dashboard.aspx";
+                case "Staff":
+                    return (userId > 0 && SecurePage.IsDriver(userId))
+                        ? "~/Driver/Dashboard.aspx"
+                        : "~/Ops/Dashboard.aspx";
                 default:         return "~/Default.aspx";
             }
         }
