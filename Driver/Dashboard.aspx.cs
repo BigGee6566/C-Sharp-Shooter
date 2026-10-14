@@ -88,16 +88,19 @@ namespace ForteLogisticsApp.DriverPortal
                 "@s", shipId, "@d", UserId);
             if (dt.Rows.Count == 0) return false;
 
-            Db.NonQuery(
-                @"UPDATE dbo.[Shipment]
-                  SET DeliveryStatus = 'OutForDelivery', CollectedDate = GETDATE(),
-                      LastStatusChange = GETDATE()
-                  WHERE ShipmentID = @s", "@s", shipId);
-
-            Db.NonQuery(
-                @"INSERT INTO dbo.[TrackingHistory] (ShipmentID, DriverID, Location, Status, Remarks)
-                  VALUES (@s, @d, 'Collected from sender', 'OutForDelivery', 'Parcel collected by driver - out for delivery')",
-                "@s", shipId, "@d", UserId);
+            // The ownership + 'Assigned' check above already scoped this to the driver's own
+            // parcel; the shared service re-validates the transition and guards against a
+            // concurrent change (two tabs, double-click) before writing, replacing the old
+            // inline UPDATE.
+            try
+            {
+                ShipmentTransitionService.TransitionDelivery(shipId, UserId, "OutForDelivery",
+                    "Collected from sender", "Parcel collected by driver - out for delivery");
+            }
+            catch (InvalidOperationException)
+            {
+                return false;   // beaten by a concurrent change; the manifest reload shows the truth
+            }
 
             if (dt.Rows[0]["SenderID"] != DBNull.Value)
             {
