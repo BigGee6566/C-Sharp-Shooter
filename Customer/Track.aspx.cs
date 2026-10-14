@@ -60,7 +60,7 @@ namespace ForteLogisticsApp.CustomerPortal
             }
 
             DataTable ship = Db.Query(
-                @"SELECT ShipmentID, TrackingNumber, DeliveryStatus, OriginCity, DestCity, DriverID
+                @"SELECT ShipmentID, TrackingNumber, DeliveryStatus, OriginCity, DestCity, DriverID, SenderID
                   FROM dbo.[Shipment] WHERE TrackingNumber = @t", "@t", waybill);
 
             if (ship.Rows.Count == 0)
@@ -86,10 +86,13 @@ namespace ForteLogisticsApp.CustomerPortal
             rptTimeline.DataSource = hist;
             rptTimeline.DataBind();
 
-            // Offer a driver rating once the parcel is delivered and a driver is known.
-            bool delivered = Db.ToStr(r["DeliveryStatus"]) == "Delivered" && r["DriverID"] != DBNull.Value;
-            pnlRate.Visible = delivered;
-            if (delivered) hfDriverId.Value = Db.ToStr(r["DriverID"]);
+            // Offer a driver rating only on the customer's OWN delivered parcel (not any
+            // delivered waybill they happen to look up). btnRate re-checks this server-side.
+            bool canRate = Db.ToStr(r["DeliveryStatus"]) == "Delivered"
+                           && r["DriverID"] != DBNull.Value
+                           && Db.ToInt(r["SenderID"]) == UserId;
+            pnlRate.Visible = canRate;
+            if (canRate) hfDriverId.Value = Db.ToStr(r["DriverID"]);
 
             // Drive the live map (TrackApi reads positions for this waybill).
             hfTrackWb.Value = Db.ToStr(r["TrackingNumber"]);
@@ -100,15 +103,35 @@ namespace ForteLogisticsApp.CustomerPortal
 
         protected void btnRate_Click(object sender, EventArgs e)
         {
-            if (!int.TryParse(hfDriverId.Value, out int driverId)) return;
-            int score = int.Parse(ddlScore.SelectedValue);
+            int score;
+            if (!int.TryParse(ddlScore.SelectedValue, out score) || score < 1 || score > 5) return;
+
+            string waybill = txtWaybill.Text.Trim();
+
+            // Owner + state re-check, server-side. Only the sender of a DELIVERED shipment may
+            // rate its driver, and the driver is read from the shipment here - never taken from
+            // the posted hidden field - so a rating cannot be aimed at an arbitrary driver or
+            // left for a parcel that was not this customer's delivered parcel.
+            DataTable own = Db.Query(
+                @"SELECT DriverID FROM dbo.[Shipment]
+                  WHERE TrackingNumber = @t AND SenderID = @u
+                    AND DeliveryStatus = 'Delivered' AND DriverID IS NOT NULL",
+                "@t", waybill, "@u", UserId);
+            if (own.Rows.Count == 0)
+            {
+                pnlRate.Visible = false;
+                lblMsg.CssClass = UiHelper.AlertClass("error") + " mt-2";
+                lblMsg.Text = "You can only rate the driver of your own delivered parcel.";
+                return;
+            }
+            int driverId = Db.ToInt(own.Rows[0]["DriverID"]);
 
             Db.NonQuery(
                 @"INSERT INTO dbo.[Rating] (ClientID, DriverID, Comment, RatingScore)
                   VALUES (@c, @d, @m, @s)",
                 "@c", UserId, "@d", driverId, "@m", txtComment.Text.Trim(), "@s", score);
 
-            DoTrack(txtWaybill.Text.Trim());   // refresh the timeline
+            DoTrack(waybill);                  // refresh the timeline
             pnlRate.Visible = false;           // one rating per view
             lblMsg.CssClass = UiHelper.AlertClass("success") + " mt-2";
             lblMsg.Text = "Thank you for rating your delivery.";
