@@ -25,11 +25,11 @@ namespace ForteLogisticsApp.CustomerPortal
             if (!IsPostBack)
             {
                 LoadMine();
-                string wb = Request.QueryString["wb"];
-                if (!string.IsNullOrEmpty(wb))
+                string wb = InputValidator.NormalizeTrackingNumber(Request.QueryString["wb"]);
+                if (wb.Length > 0)
                 {
                     txtWaybill.Text = wb;
-                    DoTrack(wb.Trim());
+                    DoTrack(wb);
                 }
             }
         }
@@ -46,7 +46,7 @@ namespace ForteLogisticsApp.CustomerPortal
 
         protected void btnTrack_Click(object sender, EventArgs e)
         {
-            DoTrack(txtWaybill.Text.Trim());
+            DoTrack(InputValidator.NormalizeTrackingNumber(txtWaybill.Text));
         }
 
         private void DoTrack(string waybill)
@@ -106,7 +106,7 @@ namespace ForteLogisticsApp.CustomerPortal
             int score;
             if (!int.TryParse(ddlScore.SelectedValue, out score) || score < 1 || score > 5) return;
 
-            string waybill = txtWaybill.Text.Trim();
+            string waybill = InputValidator.NormalizeTrackingNumber(txtWaybill.Text);
 
             // Owner + state re-check, server-side. Only the sender of a DELIVERED shipment may
             // rate its driver, and the driver is read from the shipment here - never taken from
