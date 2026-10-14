@@ -30,7 +30,7 @@ namespace ForteLogisticsApp.Security
                 // Shipment.WarehouseStatus
                 ["WarehouseStatus"] = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase)
                 {
-                    ["Pending"]    = Set("Received"),
+                    ["Pending"]    = Set("Received", "Sorted"),             // scan-and-sort in one step is allowed
                     ["Received"]   = Set("Sorted"),
                     ["Sorted"]     = Set("Dispatched"),
                     ["Dispatched"] = Set(),                                 // terminal

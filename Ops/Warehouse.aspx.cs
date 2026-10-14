@@ -172,8 +172,11 @@ namespace ForteLogisticsApp.Ops
             // Re-check payment eligibility at the actual write, not just when the parcel was
             // scanned - the hidden field could otherwise carry a shipment that was still
             // unpaid when the page was first loaded and must not be walked forward on save.
-            string gateStatus = Db.ToStr(Db.Scalar(
-                "SELECT PaymentGateStatus FROM dbo.[Shipment] WHERE ShipmentID = @s", "@s", shipmentId));
+            DataTable shipRow = Db.Query(
+                "SELECT PaymentGateStatus, WarehouseStatus FROM dbo.[Shipment] WHERE ShipmentID = @s", "@s", shipmentId);
+            if (shipRow.Rows.Count == 0) { LoadQueue(); return; }
+
+            string gateStatus = Db.ToStr(shipRow.Rows[0]["PaymentGateStatus"]);
             if (gateStatus != "NotRequired" && gateStatus != "PaymentSuccessful")
             {
                 lblSaveMsg.CssClass = UiHelper.AlertClass("error") + " mt-1";
@@ -184,6 +187,19 @@ namespace ForteLogisticsApp.Ops
 
             string warehouseStatus = ddlWarehouse.SelectedValue;
             string exceptionType = ddlException.SelectedValue;
+
+            // Whitelist the warehouse move: changing to a different status must be a legal step
+            // (no skipping straight to dispatch, no moving backwards). Re-saving the same status -
+            // e.g. just correcting the sort lane or an exception flag - stays allowed.
+            string currentWh = Db.ToStr(shipRow.Rows[0]["WarehouseStatus"]);
+            if (!string.Equals(warehouseStatus, currentWh, StringComparison.OrdinalIgnoreCase) &&
+                !StateMachine.CanTransition("WarehouseStatus", currentWh, warehouseStatus))
+            {
+                lblSaveMsg.CssClass = UiHelper.AlertClass("error") + " mt-1";
+                lblSaveMsg.Text = "Cannot move this parcel from " + currentWh + " to " + warehouseStatus + ".";
+                LoadQueue();
+                return;
+            }
 
             // Warehouse status drives the customer-facing delivery status, except once the
             // parcel has reached a terminal state - that must not be walked backwards.

@@ -22,8 +22,10 @@ namespace ForteLogisticsApp.Tests.Unit
         [DataRow("DeliveryStatus", "Delivered", "Sorted", false)]         // terminal
         // WarehouseStatus
         [DataRow("WarehouseStatus", "Pending", "Received", true)]
-        [DataRow("WarehouseStatus", "Pending", "Dispatched", false)]      // can't skip sorting
+        [DataRow("WarehouseStatus", "Pending", "Sorted", true)]           // scan-and-sort in one step
+        [DataRow("WarehouseStatus", "Pending", "Dispatched", false)]      // can't skip straight to dispatch
         [DataRow("WarehouseStatus", "Sorted", "Dispatched", true)]
+        [DataRow("WarehouseStatus", "Sorted", "Pending", false)]          // no regression
         // RouteStatus
         [DataRow("RouteStatus", "Planned", "Active", true)]
         [DataRow("RouteStatus", "Completed", "Active", false)]
