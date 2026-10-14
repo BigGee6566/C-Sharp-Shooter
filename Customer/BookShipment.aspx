@@ -179,6 +179,9 @@
 
                 <!-- STEP 3: PAYMENT -->
                 <asp:View ID="vwPayment" runat="server">
+                    <!-- One-time token: a double-click or F5-resubmit of Confirm carries a spent
+                         token and is rejected server-side, so a booking is created at most once. -->
+                    <asp:HiddenField ID="hfSubmitToken" runat="server" />
                     <h2 class="text-2xl font-bold text-on-surface mb-1">Step 3: Recipient &amp; Confirm</h2>
                     <p class="text-sm text-on-surface-variant mb-6">Confirm the recipient and review your quote.</p>
 
