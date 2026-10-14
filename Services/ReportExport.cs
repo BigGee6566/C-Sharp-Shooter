@@ -76,10 +76,14 @@ namespace ForteLogisticsApp.Services
                            first == '@' || first == '\t' || first == '\r';
             if (!trigger) return value;
 
-            // A plain signed number (e.g. -42.50) is harmless and must stay numeric.
+            // A plain signed number (e.g. -42.50) is harmless and must stay numeric. Only a
+            // bare sign + decimal counts: grouping/whitespace is deliberately NOT allowed, so a
+            // space-separated value like "+27 71 234 5678" is treated as text and neutralised
+            // rather than being read as a group-separated number under a space-grouping culture.
+            const NumberStyles bareNumber = NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint;
             decimal _;
-            if (decimal.TryParse(value, NumberStyles.Any, CultureInfo.GetCultureInfo("en-ZA"), out _) ||
-                decimal.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out _))
+            if (decimal.TryParse(value, bareNumber, CultureInfo.GetCultureInfo("en-ZA"), out _) ||
+                decimal.TryParse(value, bareNumber, CultureInfo.InvariantCulture, out _))
                 return value;
 
             return "'" + value;
