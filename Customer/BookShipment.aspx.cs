@@ -36,6 +36,7 @@ namespace ForteLogisticsApp.CustomerPortal
         protected Panel pnlStep4Indicator;
 
         protected HiddenField hfSelectedSize;
+        protected HiddenField hfSubmitToken;
 
         protected TextBox txtPickupStreet;
         protected TextBox txtPickupCity;
@@ -182,6 +183,11 @@ namespace ForteLogisticsApp.CustomerPortal
             lblSummaryDelivery.Text = deliveryCity;
             lblSummaryTotal.Text = "R " + Quote.ToString("N2");
 
+            // Entering the confirm step: mint a one-time token so the Confirm POST can be
+            // accepted exactly once. Re-issued each time the step is shown (e.g. after going
+            // back to addresses and forward again) so the latest render always holds a live one.
+            hfSubmitToken.Value = IssueSubmitToken("BookShipment");
+
             mvBookShipment.SetActiveView(vwPayment);
             UpdateWizardIndicators(3);
         }
@@ -206,6 +212,17 @@ namespace ForteLogisticsApp.CustomerPortal
             {
                 lblStatus.CssClass = UiHelper.AlertClass("error") + " mt-4";
                 lblStatus.Text = "Please complete the collection, delivery and recipient details.";
+                return;
+            }
+
+            // Consume the one-time token only after the details validate, so a correctable
+            // error above leaves the token live for a genuine retry. A double-click or an
+            // F5-resubmit arrives here carrying a spent token and is turned away before the
+            // INSERT, so one Confirm can create at most one shipment + invoice.
+            if (!ConsumeSubmitToken("BookShipment", hfSubmitToken.Value))
+            {
+                lblStatus.CssClass = UiHelper.AlertClass("info") + " mt-4";
+                lblStatus.Text = "This booking has already been submitted. Check My Shipments before booking again.";
                 return;
             }
 

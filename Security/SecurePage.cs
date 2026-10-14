@@ -88,6 +88,35 @@ namespace ForteLogisticsApp.Security
             return Uri.IsWellFormedUriString(url, UriKind.Relative);
         }
 
+        /// <summary>
+        /// Mints a fresh one-time submit token for <paramref name="scope"/>, stores it in the
+        /// session, and returns it for the page to echo into a hidden field. Call this when
+        /// the final confirm step is first shown. See <see cref="SubmitGuard"/> for why this
+        /// is used instead of blanket Post-Redirect-Get.
+        /// </summary>
+        protected string IssueSubmitToken(string scope)
+        {
+            string token = Guid.NewGuid().ToString("N");
+            Session["SubmitToken:" + scope] = token;
+            return token;
+        }
+
+        /// <summary>
+        /// Validates the <paramref name="presented"/> token (from the page's hidden field)
+        /// against the one issued for <paramref name="scope"/> and consumes it on success, so
+        /// a double-click or a refresh-and-resubmit of the same confirm POST is rejected
+        /// rather than performing the action twice. Returns false when the token is missing,
+        /// stale, or already spent.
+        /// </summary>
+        protected bool ConsumeSubmitToken(string scope, string presented)
+        {
+            string key = "SubmitToken:" + scope;
+            bool ok;
+            string remaining = SubmitGuard.Check(Session[key] as string, presented, out ok);
+            Session[key] = remaining;
+            return ok;
+        }
+
         /// <summary>Redirects to Login if not authenticated or not in one of the allowed roles.</summary>
         protected void RequireRole(params string[] allowedRoles)
         {

@@ -153,6 +153,7 @@
     <Compile Include="Services\GeoService.cs" />
     <Compile Include="Services\ShipmentTransitionService.cs" />
     <Compile Include="Security\StateMachine.cs" />
+    <Compile Include="Security\SubmitGuard.cs" />
     <Compile Include="Data\Owned.cs" />
     <Compile Include="Services\ReportExport.cs" />
     <Compile Include="Services\PaymentGateway.cs" />
