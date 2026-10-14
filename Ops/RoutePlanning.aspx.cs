@@ -328,6 +328,7 @@ namespace ForteLogisticsApp.Ops
             int assigned = 0;
             int blocked = 0;
             int mismatched = 0;
+            int taken = 0;
             foreach (ListItem item in cblParcels.Items)
             {
                 if (!item.Selected) continue;
@@ -358,13 +359,17 @@ namespace ForteLogisticsApp.Ops
                     continue;
                 }
 
-                // Assigned to a driver, awaiting collection (not yet in the driver's hands).
-                Db.NonQuery(
+                // Assigned to a driver, awaiting collection. The guard makes a concurrent or
+                // repeated assignment a no-op (rows = 0) instead of silently overwriting another
+                // staff member's assignment or re-dispatching an already-dispatched parcel: only
+                // a still-unassigned, still-sorted parcel is taken.
+                int rows = Db.NonQuery(
                     @"UPDATE dbo.[Shipment]
                       SET RouteID = @r, DriverID = @d, WarehouseStatus = 'Dispatched',
                           DeliveryStatus = 'Assigned', LastStatusChange = GETDATE()
-                      WHERE ShipmentID = @s",
+                      WHERE ShipmentID = @s AND RouteID IS NULL AND WarehouseStatus = 'Sorted'",
                     "@r", routeId, "@d", (object)driverId, "@s", shipId);
+                if (rows != 1) { taken++; continue; }
 
                 // Record which driver AND vehicle the parcel was assigned to.
                 Db.NonQuery(
@@ -386,6 +391,7 @@ namespace ForteLogisticsApp.Ops
             var notes = new System.Collections.Generic.List<string>();
             if (blocked > 0) notes.Add(blocked + " skipped - awaiting customer payment");
             if (mismatched > 0) notes.Add(mismatched + " skipped - destination does not match this route's service area (" + routeServiceArea + ")");
+            if (taken > 0) notes.Add(taken + " skipped - already assigned to another route");
             string noteText = notes.Count > 0 ? " " + string.Join("; ", notes) + "." : "";
 
             lblAssignMsg.CssClass = UiHelper.AlertClass(assigned > 0) + " mt-1";
