@@ -93,30 +93,6 @@ namespace ForteLogisticsApp.DriverPortal
         {
             if (!int.TryParse(hfShipmentId.Value, out int shipId)) return;
 
-            // Re-check ownership and status at the write itself, not only when the parcel was
-            // scanned into hfShipmentId - a stale postback (or a second driver's browser tab)
-            // must not be able to confirm a delivery for a parcel it no longer owns, or one
-            // already finalised.
-            DataTable current = Db.Query(
-                "SELECT DriverID, DeliveryStatus FROM dbo.[Shipment] WHERE ShipmentID = @s", "@s", shipId);
-            if (current.Rows.Count == 0 ||
-                current.Rows[0]["DriverID"] == DBNull.Value ||
-                Db.ToInt(current.Rows[0]["DriverID"]) != UserId)
-            {
-                pnlConfirm.Visible = false;
-                lblScanMsg.CssClass = UiHelper.AlertClass("error") + " mt-2";
-                lblScanMsg.Text = "This parcel is not assigned to you.";
-                return;
-            }
-            string currentStatus = Db.ToStr(current.Rows[0]["DeliveryStatus"]);
-            if (currentStatus != "OutForDelivery")
-            {
-                pnlConfirm.Visible = false;
-                lblScanMsg.CssClass = UiHelper.AlertClass("warning") + " mt-2";
-                lblScanMsg.Text = "This parcel is no longer awaiting delivery confirmation.";
-                return;
-            }
-
             string outcome = ddlOutcome.SelectedValue;
             bool delivered = outcome == "Delivered";
             string receivedBy = txtReceivedBy.Text.Trim();
@@ -125,17 +101,24 @@ namespace ForteLogisticsApp.DriverPortal
                 ? "Delivered" + (receivedBy.Length > 0 ? " - received by " + receivedBy : "") + (notes.Length > 0 ? " (" + notes + ")" : "")
                 : "Delivery failed" + (notes.Length > 0 ? " - " + notes : "");
 
-            Db.NonQuery(
-                @"UPDATE dbo.[Shipment]
-                  SET DeliveryStatus = @st, LastStatusChange = GETDATE(),
-                      DeliveryDate = CASE WHEN @dl = 1 THEN GETDATE() ELSE DeliveryDate END
-                  WHERE ShipmentID = @id",
-                "@st", outcome, "@dl", delivered ? 1 : 0, "@id", shipId);
-
-            Db.NonQuery(
-                @"INSERT INTO dbo.[TrackingHistory] (ShipmentID, DriverID, Location, Status, Remarks)
-                  VALUES (@s, @d, 'Delivery Point', @st, @rm)",
-                "@s", shipId, "@d", UserId, "@st", outcome, "@rm", remark);
+            // Ownership and the state change both go through the shared guards: Owned re-checks
+            // that the parcel is on this driver's manifest, and ShipmentTransitionService
+            // validates the whitelist, blocks a concurrent change (@@ROWCOUNT), and writes the
+            // tracking + audit history in one transaction. This replaces the old inline UPDATE
+            // and is what stops "deliver a parcel that was never collected" - an Assigned parcel
+            // cannot transition straight to Delivered.
+            try
+            {
+                Owned.RequireShipmentForDriver(shipId, UserId);
+                ShipmentTransitionService.TransitionDelivery(shipId, UserId, outcome, "Delivery Point", remark);
+            }
+            catch (Exception ex) when (ex is InvalidOperationException || ex is AccessDeniedException)
+            {
+                pnlConfirm.Visible = false;
+                lblScanMsg.CssClass = UiHelper.AlertClass("warning") + " mt-2";
+                lblScanMsg.Text = ex.Message;
+                return;
+            }
 
             // Notify the sender.
             DataTable snd = Db.Query("SELECT SenderID, TrackingNumber FROM dbo.[Shipment] WHERE ShipmentID = @s", "@s", shipId);
