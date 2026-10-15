@@ -26,9 +26,16 @@ namespace ForteLogisticsApp.Tests.Unit
         [DataRow("WarehouseStatus", "Pending", "Dispatched", false)]      // can't skip straight to dispatch
         [DataRow("WarehouseStatus", "Sorted", "Dispatched", true)]
         [DataRow("WarehouseStatus", "Sorted", "Pending", false)]          // no regression
-        // RouteStatus
+        // RouteStatus - real lifecycle: Planned/Active/Inactive/Completed
         [DataRow("RouteStatus", "Planned", "Active", true)]
-        [DataRow("RouteStatus", "Completed", "Active", false)]
+        [DataRow("RouteStatus", "Planned", "Inactive", true)]
+        [DataRow("RouteStatus", "Active", "Inactive", true)]      // dispatch deactivates
+        [DataRow("RouteStatus", "Inactive", "Active", true)]      // dispatch reactivates
+        [DataRow("RouteStatus", "Active", "Completed", true)]
+        [DataRow("RouteStatus", "Inactive", "Completed", true)]
+        [DataRow("RouteStatus", "Completed", "Active", false)]    // terminal
+        [DataRow("RouteStatus", "Completed", "Inactive", false)]  // terminal
+        [DataRow("RouteStatus", "Active", "Cancelled", false)]    // Cancelled is not a route state
         // DriverAvailability
         [DataRow("DriverAvailability", "Available", "On Route", true)]
         [DataRow("DriverAvailability", "Off Duty", "On Route", false)]

@@ -35,13 +35,16 @@ namespace ForteLogisticsApp.Security
                     ["Sorted"]     = Set("Dispatched"),
                     ["Dispatched"] = Set(),                                 // terminal
                 },
-                // Route.Status
+                // Route.Status - the lifecycle the app actually runs: a route is seeded Planned,
+                // created Active, toggled Active <-> Inactive by dispatch, and finally Completed
+                // (terminal). "Inactive" is the real deactivated state the UI uses; there is no
+                // "Cancelled" route anywhere in the code, so it is not modelled here.
                 ["RouteStatus"] = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase)
                 {
-                    ["Planned"]   = Set("Active", "Cancelled"),
-                    ["Active"]    = Set("Completed", "Cancelled"),
-                    ["Completed"] = Set(),
-                    ["Cancelled"] = Set(),
+                    ["Planned"]   = Set("Active", "Inactive"),
+                    ["Active"]    = Set("Inactive", "Completed"),
+                    ["Inactive"]  = Set("Active", "Completed"),
+                    ["Completed"] = Set(),                         // terminal
                 },
                 // Driver.AvailabilityStatus
                 ["DriverAvailability"] = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase)

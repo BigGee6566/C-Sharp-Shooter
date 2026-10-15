@@ -188,18 +188,33 @@ namespace ForteLogisticsApp.Ops
             if (e.CommandName == "toggle")
             {
                 string current = Db.ToStr(Db.Scalar("SELECT Status FROM dbo.[Route] WHERE RouteID = @r", "@r", routeId));
-                if (current == "Completed")
+                string next = current == "Inactive" ? "Active" : "Inactive";
+
+                // Whitelist the route status change: a Completed route is terminal and cannot be
+                // reactivated or deactivated, and no other illegal jump is permitted either.
+                if (!StateMachine.CanTransition("RouteStatus", current, next))
                 {
                     lblRouteMsg.CssClass = UiHelper.AlertClass("error") + " mt-1";
-                    lblRouteMsg.Text = "A completed route cannot be reactivated or deactivated.";
+                    lblRouteMsg.Text = current == "Completed"
+                        ? "A completed route cannot be reactivated or deactivated."
+                        : "This route cannot be changed from " + current + " to " + next + ".";
                     LoadRoutesTable();
                     return;
                 }
 
-                string next = current == "Inactive" ? "Active" : "Inactive";
-                Db.NonQuery(
-                    "UPDATE dbo.[Route] SET Status = @s, UpdatedBy = @u, UpdatedDate = GETDATE() WHERE RouteID = @r",
-                    "@s", next, "@u", UserId, "@r", routeId);
+                // Status-guarded UPDATE: a concurrent toggle that already moved the route makes
+                // this a no-op (rows = 0) instead of applying a stale change on top of it.
+                int toggled = Db.NonQuery(
+                    "UPDATE dbo.[Route] SET Status = @s, UpdatedBy = @u, UpdatedDate = GETDATE() WHERE RouteID = @r AND Status = @cur",
+                    "@s", next, "@u", UserId, "@r", routeId, "@cur", current);
+                if (toggled != 1)
+                {
+                    lblRouteMsg.CssClass = UiHelper.AlertClass("error") + " mt-1";
+                    lblRouteMsg.Text = "This route's status changed meanwhile. Refresh and try again.";
+                    LoadRoutesTable();
+                    return;
+                }
+
                 Db.NonQuery(
                     @"INSERT INTO dbo.AuditLog (UserID, Action, Entity, EntityID, Details)
                       VALUES (@u, 'Route.StatusChange', 'Route', @e, @d)",
@@ -293,12 +308,47 @@ namespace ForteLogisticsApp.Ops
                 return;
             }
 
-            Db.NonQuery(
-                @"INSERT INTO dbo.[Route] (RouteName, DriverID, VehicleID, Status, ServiceArea, CreatedBy)
-                  VALUES (@n, @d, @v, 'Active', @sa, @u)",
-                "@n", txtRouteName.Text.Trim(), "@d", driverId, "@v", vehicleId, "@sa", serviceArea, "@u", UserId);
+            // Create the route and put its driver On Route atomically, with the driver's
+            // availability transition whitelisted: a route must never be left without its
+            // driver flipped (or vice versa), and an Off Duty driver must not be silently
+            // jumped straight to On Route - that illegal transition is rejected here so the
+            // whole creation rolls back and nothing is written.
+            string createError = null;
+            Db.RunInTransaction((conn, tx) =>
+            {
+                string driverAvail = Db.ToStr(Db.Scalar(conn, tx,
+                    "SELECT AvailabilityStatus FROM dbo.[Driver] WITH (UPDLOCK, ROWLOCK) WHERE UserID = @d",
+                    "@d", driverId));
 
-            Db.NonQuery("UPDATE dbo.[Driver] SET AvailabilityStatus = 'On Route' WHERE UserID = @d", "@d", driverId);
+                bool alreadyOnRoute = string.Equals(driverAvail, "On Route", StringComparison.OrdinalIgnoreCase);
+                if (!alreadyOnRoute && !StateMachine.CanTransition("DriverAvailability", driverAvail, "On Route"))
+                {
+                    createError = "This driver is " + driverAvail +
+                                  " and cannot be put On Route. Set them Available under Fleet first.";
+                    return;   // nothing written yet; the transaction rolls back
+                }
+
+                Db.NonQuery(conn, tx,
+                    @"INSERT INTO dbo.[Route] (RouteName, DriverID, VehicleID, Status, ServiceArea, CreatedBy)
+                      VALUES (@n, @d, @v, 'Active', @sa, @u)",
+                    "@n", txtRouteName.Text.Trim(), "@d", driverId, "@v", vehicleId, "@sa", serviceArea, "@u", UserId);
+
+                if (!alreadyOnRoute)
+                {
+                    // Status-guarded so the flip only lands from the state we validated.
+                    Db.NonQuery(conn, tx,
+                        "UPDATE dbo.[Driver] SET AvailabilityStatus = 'On Route' WHERE UserID = @d AND AvailabilityStatus = @from",
+                        "@d", driverId, "@from", driverAvail);
+                }
+            });
+
+            if (createError != null)
+            {
+                lblRouteMsg.CssClass = UiHelper.AlertClass("error") + " mt-1";
+                lblRouteMsg.Text = createError;
+                LoadDrivers();
+                return;
+            }
 
             lblRouteMsg.CssClass = UiHelper.AlertClass("success") + " mt-1";
             lblRouteMsg.Text = "Route created.";
