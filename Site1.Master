@@ -305,6 +305,9 @@
         .fcl-topnav .fcl-nav-link-active:hover { background: #e2e2e5; color: #002068; }
     </style>
 
+    <!-- Shared report / dashboard styles (KPI cards, chart cards, pipeline schematic, print pagination). -->
+    <link rel="stylesheet" href="<%= ResolveUrl("~/Styles/reports.css") %>" />
+
     <asp:ContentPlaceHolder ID="HeadContent" runat="server">
     </asp:ContentPlaceHolder>
 </head>

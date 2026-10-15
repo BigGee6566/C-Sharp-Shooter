@@ -114,6 +114,11 @@
     <Content Include="Reports\DriverPerformance.aspx" />
     <Content Include="Reports\MonthlyRevenue.aspx" />
     <Content Include="Reports\LostDamaged.aspx" />
+    <Content Include="Controls\ReportHeader.ascx" />
+    <Content Include="Controls\ReportFooter.ascx" />
+    <Content Include="Scripts\lc-charts.js" />
+    <Content Include="Scripts\vendor\chart.umd.min.js" />
+    <Content Include="Styles\reports.css" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Default.aspx.cs">
@@ -157,6 +162,18 @@
     <Compile Include="Security\InputValidator.cs" />
     <Compile Include="Data\Owned.cs" />
     <Compile Include="Services\ReportExport.cs" />
+    <Compile Include="Services\ReportPeriod.cs" />
+    <Compile Include="Services\ChartJson.cs" />
+    <Compile Include="Services\AnalyticsService.cs" />
+    <Compile Include="Services\ReportHtml.cs" />
+    <Compile Include="Controls\ReportHeader.ascx.cs">
+      <DependentUpon>ReportHeader.ascx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Controls\ReportFooter.ascx.cs">
+      <DependentUpon>ReportFooter.ascx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
     <Compile Include="Services\PaymentGateway.cs" />
     <Compile Include="Services\PaymentService.cs" />
     <Compile Include="Login.aspx.cs">

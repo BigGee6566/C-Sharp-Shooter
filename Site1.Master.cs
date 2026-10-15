@@ -96,15 +96,19 @@ namespace ForteLogisticsApp
             // min-w-0 defeats the flex item's default min-width:auto. Without it the widest
             // child stretches the canvas past the viewport, which pushes the top bar's
             // right-hand cluster - the mobile hamburger included - off screen.
+            // lc-canvas is the hook Styles/reports.css uses to release this scroll container
+            // in print, so a long report prints across every page instead of one screenful.
             mainCanvas.Attributes["class"] = mode == Chrome.Sidebar
-                ? "flex-1 min-w-0 ml-0 md:ml-64 overflow-y-auto relative h-full"
-                : "flex-1 min-w-0 overflow-y-auto relative h-full";
+                ? "lc-canvas flex-1 min-w-0 ml-0 md:ml-64 overflow-y-auto relative h-full"
+                : "lc-canvas flex-1 min-w-0 overflow-y-auto relative h-full";
 
             // Default.aspx and Contact.aspx carry their own max-width and gutters, so the
             // shell's padding on top of that is a doubled gutter.
+            // lc-pad lets Styles/reports.css drop this gutter in print (the @page margins
+            // already provide one).
             divContentPad.Attributes["class"] = mode == Chrome.TopNav
                 ? string.Empty
-                : "p-margin-mobile md:p-margin-desktop";
+                : "lc-pad p-margin-mobile md:p-margin-desktop";
         }
 
         private void RenderChrome()
@@ -205,7 +209,7 @@ namespace ForteLogisticsApp
                 : string.Empty;
 
             return "<a class='fcl-nav-link' href='" + ResolveUrl("~/Notifications.aspx") +
-                   "'><span class='material-symbols-outlined'>notifications</span>" +
+                   "'><span class='material-symbols-outlined' aria-hidden='true'>notifications</span>" +
                    "<span>Notifications</span>" + badge + "</a>";
         }
 
@@ -214,7 +218,7 @@ namespace ForteLogisticsApp
             sb.Append("<a class='fcl-nav-link")
               .Append(IsActiveLink(url, highlightForFolder) ? " fcl-nav-link-active" : string.Empty)
               .Append("' href='").Append(ResolveUrl(url)).Append("'>")
-              .Append("<span class='material-symbols-outlined'>").Append(icon).Append("</span>")
+              .Append("<span class='material-symbols-outlined' aria-hidden='true'>").Append(icon).Append("</span>")
               .Append("<span>").Append(text).Append("</span></a>");
         }
 
