@@ -254,5 +254,19 @@ namespace ForteLogisticsApp.Services
         {
             return rate == null ? "n/a" : rate.Value.ToString("0.0", CultureInfo.InvariantCulture) + "%";
         }
+
+        /// <summary>
+        /// Change between two RATES, in percentage points ("up 4.2 points"). A relative change
+        /// of a percentage ("down 4.3%") is ambiguous, so rates are always compared this way.
+        /// </summary>
+        public static string DescribePoints(decimal? current, decimal? previous)
+        {
+            if (current == null) return "nothing to measure this period";
+            if (previous == null) return "no previous period to compare";
+            decimal diff = Math.Round(current.Value - previous.Value, 1, MidpointRounding.AwayFromZero);
+            if (diff == 0m) return "no change vs previous period";
+            return (diff > 0 ? "up " : "down ") +
+                   Math.Abs(diff).ToString("0.0", CultureInfo.InvariantCulture) + " points vs previous period";
+        }
     }
 }

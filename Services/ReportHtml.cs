@@ -71,6 +71,31 @@ namespace ForteLogisticsApp.Services
             return sb.ToString();
         }
 
+        /// <summary>A rate KPI (e.g. delivery success) whose change is stated in percentage points.</summary>
+        public static string KpiRate(string icon, string label, decimal? current, decimal? previous,
+            bool higherIsBetter, string hint = null)
+        {
+            int dir = (current == null || previous == null) ? 0 : Delta.Direction(current.Value, previous.Value);
+            string tone = dir == 0 ? "flat" : ((dir > 0) == higherIsBetter ? "good" : "bad");
+            string arrow = dir > 0 ? "arrow_upward" : dir < 0 ? "arrow_downward" : "remove";
+            string verdict = tone == "good" ? " (favourable)" : tone == "bad" ? " (unfavourable)" : string.Empty;
+
+            var sb = new StringBuilder();
+            sb.Append("<div class='lc-kpi'>")
+              .Append("<div class='lc-kpi-head'><span class='material-symbols-outlined' aria-hidden='true'>")
+              .Append(Enc(icon)).Append("</span><span class='lc-kpi-label'>").Append(Enc(label)).Append("</span></div>")
+              .Append("<div class='lc-kpi-value'>").Append(Enc(Delta.FormatRate(current))).Append("</div>")
+              .Append("<div class='lc-kpi-delta lc-tone-").Append(tone).Append("'>")
+              .Append("<span class='material-symbols-outlined' aria-hidden='true'>").Append(arrow).Append("</span>")
+              .Append(Enc(Delta.DescribePoints(current, previous) + verdict)).Append("</div>");
+            if (!string.IsNullOrEmpty(hint))
+            {
+                sb.Append("<div class='lc-kpi-hint'>").Append(Enc(hint)).Append("</div>");
+            }
+            sb.Append("</div>");
+            return sb.ToString();
+        }
+
         /// <summary>A point-in-time figure with no comparison (e.g. drivers on route right now).</summary>
         public static string Stat(string icon, string label, string value, string hint = null)
         {

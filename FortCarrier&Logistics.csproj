@@ -114,6 +114,7 @@
     <Content Include="Reports\DriverPerformance.aspx" />
     <Content Include="Reports\MonthlyRevenue.aspx" />
     <Content Include="Reports\LostDamaged.aspx" />
+    <Content Include="Reports\Performance.aspx" />
     <Content Include="Controls\ReportHeader.ascx" />
     <Content Include="Controls\ReportFooter.ascx" />
     <Content Include="Scripts\lc-charts.js" />
@@ -166,12 +167,17 @@
     <Compile Include="Services\ChartJson.cs" />
     <Compile Include="Services\AnalyticsService.cs" />
     <Compile Include="Services\ReportHtml.cs" />
+    <Compile Include="Services\ReportQuery.cs" />
+    <Compile Include="Reports\Performance.aspx.cs">
+      <DependentUpon>Reports\Performance.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
     <Compile Include="Controls\ReportHeader.ascx.cs">
-      <DependentUpon>ReportHeader.ascx</DependentUpon>
+      <DependentUpon>Controls\ReportHeader.ascx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>
     </Compile>
     <Compile Include="Controls\ReportFooter.ascx.cs">
-      <DependentUpon>ReportFooter.ascx</DependentUpon>
+      <DependentUpon>Controls\ReportFooter.ascx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>
     </Compile>
     <Compile Include="Services\PaymentGateway.cs" />
