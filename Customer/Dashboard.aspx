@@ -24,7 +24,7 @@
     <section class="grid grid-cols-1 md:grid-cols-3 gap-gutter mb-stack-lg">
         <div class="bg-surface-container-lowest border border-outline-variant p-stack-md rounded-lg relative overflow-hidden shadow-[0_20px_40px_-15px_rgba(0,51,153,0.04)]">
             <div class="flex justify-between items-start mb-stack-sm">
-                <h3 class="font-label-md text-label-md text-on-surface-variant">Active Shipments</h3>
+                <h2 class="font-label-md text-label-md text-on-surface-variant">Active Shipments</h2>
                 <span class="material-symbols-outlined text-primary">flight_takeoff</span>
             </div>
             <p class="font-headline-xl text-headline-xl text-on-background mb-base">
@@ -37,7 +37,7 @@
 
         <div class="bg-surface-container-lowest border border-outline-variant p-stack-md rounded-lg relative overflow-hidden shadow-[0_20px_40px_-15px_rgba(0,51,153,0.04)]">
             <div class="flex justify-between items-start mb-stack-sm">
-                <h3 class="font-label-md text-label-md text-on-surface-variant">Delivered</h3>
+                <h2 class="font-label-md text-label-md text-on-surface-variant">Delivered</h2>
                 <span class="material-symbols-outlined text-primary">task_alt</span>
             </div>
             <p class="font-headline-xl text-headline-xl text-on-background mb-base">
@@ -48,13 +48,18 @@
 
         <div class="bg-surface-container-lowest border border-outline-variant p-stack-md rounded-lg relative overflow-hidden shadow-[0_20px_40px_-15px_rgba(0,51,153,0.04)]">
             <div class="flex justify-between items-start mb-stack-sm">
-                <h3 class="font-label-md text-label-md text-on-surface-variant">Outstanding Balance</h3>
+                <h2 class="font-label-md text-label-md text-on-surface-variant">Outstanding Balance</h2>
                 <span class="material-symbols-outlined text-primary">account_balance_wallet</span>
             </div>
             <p class="font-headline-xl text-headline-xl text-on-background mb-base">
                 R <asp:Literal ID="litOutstanding" runat="server" /></p>
             <p class="font-label-sm text-label-sm text-on-surface-variant">Unpaid invoices on your account</p>
         </div>
+    </section>
+
+    <!-- Their own shipping over the last 12 months: charts and anything needing their action. -->
+    <section class="lc-dashboard mb-stack-lg">
+        <asp:Literal ID="litSummary" runat="server" EnableViewState="false" />
     </section>
 
     <!-- Activity + notifications -->

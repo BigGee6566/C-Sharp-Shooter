@@ -14,6 +14,7 @@ namespace ForteLogisticsApp.DriverPortal
         protected Panel pnlEmpty;
         protected Label lblMsg;
         protected Button btnCollectAll;
+        protected Literal litSummary;
 
         protected void Page_Load(object sender, EventArgs e)
         {
@@ -40,6 +41,13 @@ namespace ForteLogisticsApp.DriverPortal
             rptManifest.DataSource = dt;
             rptManifest.DataBind();
             pnlEmpty.Visible = dt.Rows.Count == 0;
+
+            // Only a registered driver has a performance record to show.
+            if (IsDriver(UserId))
+            {
+                ChartAssets.Register(this);
+                litSummary.Text = RoleDashboards.Render(() => RoleDashboards.Driver(UserId, DateTime.Now, ResolveUrl), null);
+            }
         }
 
         protected void rptManifest_ItemCommand(object source, RepeaterCommandEventArgs e)

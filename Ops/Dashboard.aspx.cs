@@ -3,6 +3,7 @@ using System.Data;
 using System.Web.UI.WebControls;
 using ForteLogisticsApp.Data;
 using ForteLogisticsApp.Security;
+using ForteLogisticsApp.Services;
 
 namespace ForteLogisticsApp.Ops
 {
@@ -10,10 +11,12 @@ namespace ForteLogisticsApp.Ops
     {
         protected Literal litRegistered, litWarehouse, litTransit, litDelivered, litExceptions;
         protected Repeater rptRecent;
+        protected Literal litSummary;
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            RequireRole("Admin", "Staff");
+            // Company-wide operations data: office staff and Admin, never drivers.
+            RequireOperationsStaff();
             if (!IsPostBack) LoadData();
         }
 
@@ -47,6 +50,12 @@ namespace ForteLogisticsApp.Ops
                   ORDER BY s.ShipmentDate DESC");
             rptRecent.DataSource = dt;
             rptRecent.DataBind();
+
+            ChartAssets.Register(this);
+            DateTime now = DateTime.Now;
+            bool admin = string.Equals(Role, "Admin", StringComparison.OrdinalIgnoreCase);
+            litSummary.Text = RoleDashboards.Render(() => RoleDashboards.Operations(now, ResolveUrl, admin),
+                RoleDashboards.CacheKey("ops", now, admin ? "admin" : "staff"));
         }
     }
 }

@@ -12,9 +12,9 @@
         </div>
 
         <div class="grid grid-cols-3 gap-4 mb-8">
-            <div class="fcl-card rounded-xl p-4"><div class="text-xs font-bold uppercase text-on-surface-variant">Assigned</div><div class="text-3xl font-black text-brandDark"><asp:Literal ID="litAssigned" runat="server">0</asp:Literal></div></div>
-            <div class="fcl-card rounded-xl p-4"><div class="text-xs font-bold uppercase text-on-surface-variant">Delivered</div><div class="text-3xl font-black text-emerald-700"><asp:Literal ID="litDelivered" runat="server">0</asp:Literal></div></div>
-            <div class="fcl-card rounded-xl p-4"><div class="text-xs font-bold uppercase text-on-surface-variant">Failed</div><div class="text-3xl font-black text-brandRed"><asp:Literal ID="litFailed" runat="server">0</asp:Literal></div></div>
+            <div class="fcl-card rounded-xl p-4"><div class="text-xs font-bold uppercase text-on-surface-variant">Assigned now</div><div class="text-3xl font-black text-brandDark"><asp:Literal ID="litAssigned" runat="server">0</asp:Literal></div></div>
+            <div class="fcl-card rounded-xl p-4"><div class="text-xs font-bold uppercase text-on-surface-variant">Delivered (all time)</div><div class="text-3xl font-black text-emerald-700"><asp:Literal ID="litDelivered" runat="server">0</asp:Literal></div></div>
+            <div class="fcl-card rounded-xl p-4"><div class="text-xs font-bold uppercase text-on-surface-variant">Failed (all time)</div><div class="text-3xl font-black text-brandRed"><asp:Literal ID="litFailed" runat="server">0</asp:Literal></div></div>
         </div>
 
         <div class="fcl-card rounded-xl p-6 overflow-x-auto">
@@ -53,6 +53,11 @@
                 <span class="material-symbols-outlined ms-32 mb-2">local_shipping</span>
                 <p>No parcels are currently assigned to you.</p>
             </asp:Panel>
+        </div>
+
+        <%-- The driver's own performance; never revenue, never colleagues. --%>
+        <div class="lc-dashboard mt-8">
+            <asp:Literal ID="litSummary" runat="server" EnableViewState="false" />
         </div>
     </div>
 </asp:Content>

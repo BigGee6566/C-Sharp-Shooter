@@ -28,6 +28,43 @@ namespace ForteLogisticsApp.Services
         }
 
         /// <summary>
+        /// Encodes a value for use inside a double-quoted CSS string (e.g. a print @page
+        /// margin-box "content"). Anything other than letters, digits, space and a few safe
+        /// punctuation marks becomes a CSS hex escape, so a quote, backslash, newline or
+        /// "&lt;/style" in a user's name can never end the string or the style element.
+        /// </summary>
+        public static string CssStringEnc(object value)
+        {
+            if (value == null || value == System.DBNull.Value) return string.Empty;
+
+            string s = value.ToString();
+            var sb = new System.Text.StringBuilder(s.Length);
+            for (int i = 0; i < s.Length; i++)
+            {
+                char c = s[i];
+                bool safe = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') ||
+                            c == ' ' || c == '.' || c == ',' || c == ':' || c == '(' || c == ')' ||
+                            c == '-' || c == '/' || c == '|';
+                if (safe)
+                {
+                    sb.Append(c);
+                    continue;
+                }
+
+                // A surrogate pair is ONE character (e.g. an emoji): escape its code point, not
+                // the two halves, which CSS would render as replacement characters.
+                int codePoint = c;
+                if (char.IsHighSurrogate(c) && i + 1 < s.Length && char.IsLowSurrogate(s[i + 1]))
+                {
+                    codePoint = char.ConvertToUtf32(c, s[i + 1]);
+                    i++;
+                }
+                sb.Append('\\').Append(codePoint.ToString("X6")).Append(' ');
+            }
+            return sb.ToString();
+        }
+
+        /// <summary>
         /// Returns a coloured status pill in the LogistiCore V5 style: a tinted background
         /// with same-hue dark text. Every pairing clears WCAG AA, which the solid-fill
         /// variants do not - white on amber or mid-grey lands around 2.2:1.

@@ -767,3 +767,44 @@ BEGIN
 END
 GO
 
+/* ============================================================
+   Reporting indexes (Services/AnalyticsService.cs). Every report and dashboard groups
+   shipments, invoices and delivery-attempt events by date and filters by owner; without
+   these, each chart query is a full table scan. Each batch guards itself, so the app's
+   DbInitializer replays them safely on startup.
+   ============================================================ */
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Shipment_ShipmentDate' AND object_id = OBJECT_ID('dbo.Shipment'))
+CREATE NONCLUSTERED INDEX IX_Shipment_ShipmentDate
+    ON dbo.[Shipment](ShipmentDate) INCLUDE (DeliveryStatus, SenderID, DriverID, DestCity, ExceptionType);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Shipment_DeliveryDate' AND object_id = OBJECT_ID('dbo.Shipment'))
+CREATE NONCLUSTERED INDEX IX_Shipment_DeliveryDate
+    ON dbo.[Shipment](DeliveryDate) INCLUDE (DeliveryStatus, SenderID, DriverID);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Shipment_Sender_Date' AND object_id = OBJECT_ID('dbo.Shipment'))
+CREATE NONCLUSTERED INDEX IX_Shipment_Sender_Date
+    ON dbo.[Shipment](SenderID, ShipmentDate) INCLUDE (DeliveryStatus, DeliveryDate);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Shipment_Driver_Status' AND object_id = OBJECT_ID('dbo.Shipment'))
+CREATE NONCLUSTERED INDEX IX_Shipment_Driver_Status
+    ON dbo.[Shipment](DriverID, DeliveryStatus) INCLUDE (DeliveryDate, ShipmentDate, LastStatusChange);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Payment_IssuedDate' AND object_id = OBJECT_ID('dbo.Payment'))
+CREATE NONCLUSTERED INDEX IX_Payment_IssuedDate
+    ON dbo.[Payment](IssuedDate) INCLUDE (Amount, PaymentStatus, ClientID, ShipmentID);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Payment_Client_Date' AND object_id = OBJECT_ID('dbo.Payment'))
+CREATE NONCLUSTERED INDEX IX_Payment_Client_Date
+    ON dbo.[Payment](ClientID, IssuedDate) INCLUDE (Amount, PaymentStatus);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_TrackingHistory_Status_Time' AND object_id = OBJECT_ID('dbo.TrackingHistory'))
+CREATE NONCLUSTERED INDEX IX_TrackingHistory_Status_Time
+    ON dbo.[TrackingHistory](Status, [Timestamp]) INCLUDE (ShipmentID, DriverID);
+GO
+
