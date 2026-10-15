@@ -1,0 +1,4 @@
+# Third-party files are stored byte-for-byte, so they keep matching their published
+# integrity hashes (Scripts/vendor/chart.umd.min.js = Chart.js 4.5.1, verified against
+# its SRI hash). Never let git rewrite their line endings.
+Scripts/vendor/** -text
