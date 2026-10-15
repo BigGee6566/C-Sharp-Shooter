@@ -168,6 +168,7 @@
     <Compile Include="Services\AnalyticsService.cs" />
     <Compile Include="Services\ReportHtml.cs" />
     <Compile Include="Services\ReportQuery.cs" />
+    <Compile Include="Services\PerformanceInsights.cs" />
     <Compile Include="Reports\Performance.aspx.cs">
       <DependentUpon>Reports\Performance.aspx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>

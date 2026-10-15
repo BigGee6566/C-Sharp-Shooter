@@ -269,6 +269,84 @@ namespace ForteLogisticsApp.Tests.Unit
             StringAssert.Contains(html, "aria-describedby='c1-summary'");
         }
 
+        [TestMethod]
+        public void Kpi_with_no_previous_base_is_neutral_not_judged()
+        {
+            string html = ReportHtml.Kpi("x", "Revenue", "R 9", 9m, 0m, true);
+            StringAssert.Contains(html, "new this period (none previously)");
+            Assert.IsFalse(html.Contains("favourable"), "there is nothing to compare against, so no verdict");
+            StringAssert.Contains(html, "lc-tone-flat");
+        }
+
+        [TestMethod]
+        public void Table_can_render_its_last_row_as_a_total_footer()
+        {
+            var rows = new List<string[]> { new[] { "Jan", "1" }, new[] { "Total", "1" } };
+            string html = ReportHtml.Table(new[] { "Month", "Booked" }, rows, "Breakdown", true);
+            StringAssert.Contains(html, "<tfoot><tr class='lc-total'><th scope='row'>Total</th><td>1</td></tr></tfoot>");
+            Assert.AreEqual(1, CountOccurrences(html, "<tbody><tr>"), "only the data row stays in the body");
+
+            string plain = ReportHtml.Table(new[] { "Month", "Booked" }, rows);
+            Assert.IsFalse(plain.Contains("<tfoot>"), "the default keeps every row in the body");
+        }
+
+        [TestMethod]
+        public void Report_numbers_use_one_fixed_format_on_every_machine()
+        {
+            string nbsp = ((char)0xA0).ToString();
+            Assert.AreEqual("1" + nbsp + "234" + nbsp + "567", ReportHtml.Count(1234567m));
+            Assert.AreEqual("R" + nbsp + "58" + nbsp + "924.50", ReportHtml.Money(58924.5m),
+                "'.' decimal point whatever the Windows locale, and no line break inside an amount");
+        }
+
+        [TestMethod]
+        public void Durations_switch_from_hours_to_days_after_two_days()
+        {
+            Assert.AreEqual("2.1 days", ReportHtml.Duration(50m), "50 hours is over two days");
+            Assert.AreEqual("36.0 hours", ReportHtml.Duration(36m));
+            Assert.AreEqual("n/a", ReportHtml.Duration(null));
+        }
+
+        [TestMethod]
+        public void A_change_that_rounds_to_zero_gets_no_verdict()
+        {
+            string html = ReportHtml.Kpi("x", "Booked", "100 001", 100001m, 100000m, true);
+            StringAssert.Contains(html, "about the same as previous period (under 0.1% change)");
+            Assert.IsFalse(html.Contains("favourable"));
+        }
+
+        [TestMethod]
+        public void Rate_kpis_without_both_values_or_with_equal_values_are_neutral()
+        {
+            Assert.IsFalse(ReportHtml.KpiRate("x", "S", 90m, null, true).Contains("favourable"));
+            Assert.IsFalse(ReportHtml.KpiRate("x", "S", null, 90m, true).Contains("favourable"));
+            StringAssert.Contains(ReportHtml.KpiRate("x", "S", 90m, 90m, true), "no change vs previous period");
+            StringAssert.Contains(ReportHtml.KpiRate("x", "Failure rate", 5m, 3m, false), "(unfavourable)");
+        }
+
+        [TestMethod]
+        public void Table_rows_carry_a_row_header_and_encode_every_cell()
+        {
+            var rows = new List<string[]> { new[] { "<b>Jan</b>", "<i>1</i>" } };
+            string html = ReportHtml.Table(new[] { "Month", "Booked" }, rows, "T", false, true);
+            StringAssert.Contains(html, "<tr><th scope='row'>&lt;b&gt;Jan&lt;/b&gt;</th><td>&lt;i&gt;1&lt;/i&gt;</td></tr>");
+            StringAssert.Contains(html, "class='report-table lc-table-num'");
+        }
+
+        [TestMethod]
+        public void A_table_whose_only_row_is_the_total_has_an_empty_body()
+        {
+            string html = ReportHtml.Table(new[] { "A" }, new List<string[]> { new[] { "Total" } }, "T", true);
+            StringAssert.Contains(html, "<tbody></tbody><tfoot><tr class='lc-total'><th scope='row'>Total</th></tr></tfoot>");
+        }
+
+        private static int CountOccurrences(string text, string token)
+        {
+            int n = 0, at = 0;
+            while ((at = text.IndexOf(token, at, StringComparison.Ordinal)) >= 0) { n++; at += token.Length; }
+            return n;
+        }
+
         private static int CountFlags(IList<PipelineStage> stages)
         {
             int n = 0;

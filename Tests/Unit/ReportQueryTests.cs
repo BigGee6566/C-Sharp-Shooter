@@ -110,6 +110,88 @@ namespace ForteLogisticsApp.Tests.Unit
         }
 
         [TestMethod]
+        public void Editing_the_dates_makes_a_custom_range_even_without_javascript()
+        {
+            // Quick range still says "30d", but the user changed the From box.
+            string qs = ReportQuery.FromForm("30d", "2026-08-01", "2026-08-31", "auto", "2026-09-16", "2026-10-15");
+            Assert.AreEqual("?from=2026-08-01&to=2026-08-31", qs);
+
+            string untouched = ReportQuery.FromForm("30d", "2026-09-16", "2026-10-15", "week", "2026-09-16", "2026-10-15");
+            Assert.AreEqual("?preset=30d&group=week", untouched, "unchanged dates keep the preset; explicit group kept");
+        }
+
+        [TestMethod]
+        public void Unreadable_form_dates_are_passed_on_encoded_for_the_next_page_to_explain()
+        {
+            string qs = ReportQuery.FromForm("custom", "<b>x</b>", "2026-02-30", "auto", "", "");
+            Assert.AreEqual("?from=%3cb%3ex%3c%2fb%3e&to=2026-02-30", qs);
+
+            string preset, problem;
+            ReportQuery.Read(System.Web.HttpUtility.ParseQueryString(qs.Substring(1)), Today, "30d", out preset, out problem);
+            StringAssert.Contains(problem, "real calendar dates");
+        }
+
+        [TestMethod]
+        public void Automatic_grouping_follows_the_range_and_shows_as_automatic()
+        {
+            Assert.AreEqual(ReportQuery.AutoGroup, ReportQuery.GroupSelection(Q("preset", "12m")));
+            Assert.AreEqual("week", ReportQuery.GroupSelection(Q("group", "WEEK")), "group matching is case-insensitive");
+
+            string preset, problem;
+            ReportPeriod p = ReportQuery.Read(Q("preset", "30d", "group", "auto"), Today, "7d", out preset, out problem);
+            Assert.AreEqual(Granularity.Day, p.Granularity);
+            Assert.IsNull(problem);
+        }
+
+        [TestMethod]
+        public void An_impossible_regroup_is_explained_not_silently_ignored()
+        {
+            string preset, problem;
+            ReportPeriod p = ReportQuery.Read(Q("preset", "12m", "group", "day"), Today, "30d", out preset, out problem);
+            Assert.AreEqual(Granularity.Month, p.Granularity);
+            Assert.AreEqual("Grouping by day is not available for last 12 months, so it is shown by month.", problem);
+        }
+
+        [TestMethod]
+        public void Custom_with_no_dates_and_half_a_range_are_explained()
+        {
+            string preset, problem;
+            ReportQuery.Read(Q("preset", "custom"), Today, "30d", out preset, out problem);
+            Assert.AreEqual("Choose both a From and a To date for a custom range.", problem);
+
+            ReportQuery.Read(Q("from", "2026-01-01"), Today, "30d", out preset, out problem);
+            Assert.IsNotNull(problem, "a From date with no To date cannot make a period");
+            Assert.AreEqual("30d", preset);
+        }
+
+        [TestMethod]
+        public void A_null_query_is_just_the_default()
+        {
+            string preset, problem;
+            ReportPeriod p = ReportQuery.Read(null, Today, "7d", out preset, out problem);
+            Assert.AreEqual("7d", preset);
+            Assert.IsNull(problem);
+            Assert.AreEqual(7, p.Days);
+        }
+
+        [TestMethod]
+        public void Range_caps_hold_at_their_exact_boundaries()
+        {
+            var start = new DateTime(2026, 1, 1);
+            Assert.IsNull(ReportPeriod.Validate(start, start.AddDays(92), Granularity.Day, Today), "93 days by day is allowed");
+            Assert.IsNotNull(ReportPeriod.Validate(start, start.AddDays(93), Granularity.Day, Today), "94 days by day is not");
+            Assert.IsNull(ReportPeriod.Validate(new DateTime(2024, 1, 1), new DateTime(2024, 1, 1).AddDays(741), Granularity.Week, Today));
+            Assert.IsNotNull(ReportPeriod.Validate(new DateTime(2024, 1, 1), new DateTime(2024, 1, 1).AddDays(742), Granularity.Week, Today));
+        }
+
+        [TestMethod]
+        public void A_period_ending_more_than_a_year_ahead_is_refused()
+        {
+            Assert.IsNull(ReportPeriod.Validate(Today, Today.AddYears(1), Granularity.Month, Today));
+            Assert.IsNotNull(ReportPeriod.Validate(Today, Today.AddYears(1).AddDays(1), Granularity.Month, Today));
+        }
+
+        [TestMethod]
         public void A_falling_success_rate_is_called_unfavourable()
         {
             string html = ReportHtml.KpiRate("x", "Delivery success", 88m, 92m, true);

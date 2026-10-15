@@ -245,6 +245,62 @@ namespace ForteLogisticsApp.Tests.Integration
             Assert.IsNull(d2.SuccessRate);
         }
 
+        [TestMethod]
+        public void Average_delivery_time_and_revenue_per_shipment_follow_the_fixture()
+        {
+            PeriodTotals t = AnalyticsService.TotalsFor(AnalyticsScope.Company(), January);
+            Assert.AreEqual(50.0m, t.AvgDeliveryHours, "S1 was booked 01-01 08:00 and delivered 01-03 10:00");
+            Assert.AreEqual(122.50m, t.RevenuePerShipment, "R490 invoiced over 4 shipments");
+
+            var february = new ReportPeriod(new DateTime(2001, 2, 1), new DateTime(2001, 2, 28), Granularity.Week);
+            Assert.AreEqual(25.0m * 24m + 9m, AnalyticsService.TotalsFor(AnalyticsScope.Company(), february).AvgDeliveryHours,
+                "S3: booked 01-08 00:00, delivered 02-02 09:00 = 25 days 9 hours");
+        }
+
+        [TestMethod]
+        public void Receivables_split_overdue_from_not_yet_due()
+        {
+            DateTime asOf = At("2001-02-01 00:00");
+            Receivables company = AnalyticsService.ReceivablesFor(AnalyticsScope.Company(), January.From, January.ToExclusive, asOf);
+            Assert.AreEqual(190m, company.Outstanding, "50 + 75 + 25 pending + 40 failed-payment; paid and cancelled excluded");
+            Assert.AreEqual(115m, company.Overdue, "S2 (due 01-14), the pending (due 01-27) and the failed-payment (due 01-29)");
+            Assert.AreEqual(3, company.OverdueInvoices);
+            Assert.AreEqual(18, company.OldestOverdueDays, "S2 due 01-14, counted to 02-01");
+            Assert.AreEqual(75m, company.NotYetDue, "S4 is not due until 02-07");
+
+            Receivables a = AnalyticsService.ReceivablesFor(AnalyticsScope.ForCustomer(customerA), January.From, January.ToExclusive, asOf);
+            Assert.AreEqual(75m, a.Outstanding, "A's own unpaid S2 invoice and the pending one");
+
+            Receivables d = AnalyticsService.ReceivablesFor(AnalyticsScope.ForDriver(driver1), January.From, January.ToExclusive, asOf);
+            Assert.AreEqual(0m, d.Outstanding, "drivers never see money");
+        }
+
+        [TestMethod]
+        public void Stuck_parcels_are_those_that_have_not_moved_for_long_enough()
+        {
+            IList<StuckStage> stuck = AnalyticsService.StuckParcels(AnalyticsScope.ForCustomer(customerB), At("2001-02-10 12:00"), 3);
+            Assert.AreEqual(1, stuck.Count);
+            Assert.AreEqual("Registered", stuck[0].Status);
+            Assert.AreEqual(1, stuck[0].Count, "S4 only - B's other parcel was delivered");
+            Assert.AreEqual(10, stuck[0].OldestDays, "booked 01-31, checked 02-10");
+
+            IList<StuckStage> notYet = AnalyticsService.StuckParcels(AnalyticsScope.ForCustomer(customerB), At("2001-02-02 12:00"), 3);
+            Assert.AreEqual(0, notYet.Count, "two days without moving is not yet stuck");
+        }
+
+        [TestMethod]
+        public void Top_customers_rank_by_money_invoiced()
+        {
+            IList<NamedValue> top = AnalyticsService.TopCustomers(AnalyticsScope.Company(), January.From, January.ToExclusive, 5);
+            Assert.AreEqual("Test anB", top[0].Name);
+            Assert.AreEqual(315m, top[0].Value, "200 + 75 + 40");
+            Assert.AreEqual("Test anA", top[1].Name);
+            Assert.AreEqual(175m, top[1].Value, "100 + 50 + 25; the cancelled R999 is excluded");
+
+            Assert.ThrowsException<UnauthorizedAccessException>(() =>
+                AnalyticsService.TopCustomers(AnalyticsScope.ForCustomer(customerA), January.From, January.ToExclusive, 5));
+        }
+
         private static DriverStanding Find(IList<DriverStanding> list, int id)
         {
             foreach (DriverStanding s in list) if (s.DriverId == id) return s;

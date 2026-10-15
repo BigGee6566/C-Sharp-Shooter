@@ -91,9 +91,7 @@
     padding: 14px 16px; margin-bottom: 20px;
 }
 .lc-filterbar .lc-field { display: flex; flex-direction: column; gap: 4px; min-width: 140px; flex: 1 1 140px; }
-.lc-filterbar label {
-    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--lc-muted);
-}
+.lc-filterbar label { font-size: 13px; font-weight: 600; color: var(--lc-ink); }
 /* Form-field boundaries need 3:1 against the card; the shell's default border is lighter. */
 .lc-filterbar .fcl-input { min-height: 44px; border-color: var(--lc-field-line); }
 .lc-filterbar .fcl-input:focus { outline: 2px solid var(--lc-primary); outline-offset: 1px; }
@@ -265,3 +263,57 @@
     .lc-report thead { display: table-header-group; }
     .lc-report tr { break-inside: avoid; }
 }
+
+/* ---------- Totals row (ReportHtml.Table lastRowIsTotal) ---------- */
+.report-table tfoot .lc-total th,
+.report-table tfoot .lc-total td {
+    font-weight: 700; color: #00164e; background: #f3f3f6;
+    border-top: 2px solid var(--lc-primary); padding: 12px 16px; text-align: left;
+}
+
+/* ---------- Page furniture (breadcrumb, error summary, notes, sub-headings) ---------- */
+.lc-breadcrumb ol { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 12px; padding: 0; font-size: 13px; color: var(--lc-muted); }
+.lc-breadcrumb li + li::before { content: "/"; margin-right: 6px; color: var(--lc-line); }
+.lc-breadcrumb [aria-current="page"] { font-weight: 700; color: var(--lc-primary); }
+.lc-error-summary {
+    display: flex; align-items: flex-start; gap: 8px; margin-bottom: 16px; padding: 12px 16px;
+    background: #ffe0b2; border: 1px solid #ef6c00; border-radius: 0.5rem; color: #7a3d00; font-weight: 600;
+}
+.lc-error-summary:focus { outline: 2px solid var(--lc-primary); outline-offset: 2px; }
+.lc-note {
+    margin: 0 0 12px; padding: 10px 12px; font-size: 14px; color: var(--lc-ink);
+    background: var(--lc-soft); border-left: 4px solid var(--lc-line); border-radius: 0.375rem;
+}
+.lc-subtitle {
+    font-family: "Inter", sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.04em;
+    text-transform: uppercase; color: var(--lc-muted); margin: 18px 0 8px;
+}
+
+/* ---------- Tables: row headers read like data; figures line up ---------- */
+.report-table tbody th { font-weight: 600; background: transparent; color: var(--lc-ink); text-transform: none;
+    letter-spacing: normal; font-size: 14px; border-bottom: 1px solid #e2e2e5; padding: 12px 16px; text-align: left; }
+.report-table.lc-table-num td,
+.report-table.lc-table-num thead th:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ---------- Attention list: priority in words + a link to act ---------- */
+.lc-exceptions li.lc-att-high { border-left-color: var(--lc-bad); background: #fef2f2; }
+.lc-exceptions li.lc-att-high .material-symbols-outlined { color: var(--lc-bad); }
+.lc-exceptions li.lc-att-info { border-left-color: var(--lc-line); background: var(--lc-soft); }
+.lc-exceptions li.lc-att-info .material-symbols-outlined { color: var(--lc-muted); }
+.lc-att-level { font-weight: 800; }
+.lc-att-link { display: inline-flex; align-items: center; gap: 2px; font-weight: 700; white-space: nowrap; min-height: 24px; }
+.lc-att-link .material-symbols-outlined { font-size: 16px; color: inherit !important; }
+
+/* ---------- Skip link (Site1.Master): hidden until focused ---------- */
+.lc-skip {
+    position: absolute; left: 8px; top: -60px; z-index: 100; padding: 10px 14px;
+    background: var(--lc-primary); color: #ffffff; font-weight: 700; border-radius: 0.375rem;
+}
+.lc-skip:focus { top: 8px; outline: 2px solid #ffffff; outline-offset: 2px; }
+
+@media print {
+    .lc-breadcrumb, .lc-error-summary, .lc-skip { display: none !important; }
+    .lc-att-link { display: none !important; }
+}
+.report-table.lc-table-num tfoot .lc-total td { text-align: right; font-variant-numeric: tabular-nums; }
+.report-table.lc-table-num td { white-space: nowrap; }

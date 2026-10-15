@@ -314,6 +314,8 @@
 <body class="bg-background text-on-background font-body-md text-body-md antialiased flex h-screen overflow-hidden">
     <form id="mainForm" runat="server" class="flex w-full h-full">
         <asp:ScriptManager ID="ScriptManager1" runat="server" />
+        <!-- First focusable element: lets keyboard users jump past the navigation. -->
+        <a href="#main-content" class="lc-skip">Skip to main content</a>
 
         <!-- SideNavBar: the portal chrome. Hidden on the landing page, which uses pnlTopNav instead. -->
         <nav id="sideNav" runat="server" class="bg-surface-container-lowest h-screen w-64 fixed left-0 top-0 border-r border-outline-variant shadow-sm flex-col p-stack-md hidden md:flex z-50 overflow-y-auto no-scrollbar no-print">
@@ -462,6 +464,7 @@
 
             <!-- The landing page's own sections carry their gutters, so RenderChrome() clears this. -->
             <div id="divContentPad" runat="server" class="p-margin-mobile md:p-margin-desktop">
+                <div id="main-content" tabindex="-1"></div>
                 <asp:ContentPlaceHolder ID="MainContent" runat="server">
                 </asp:ContentPlaceHolder>
             </div>

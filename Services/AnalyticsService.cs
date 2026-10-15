@@ -66,6 +66,15 @@ namespace ForteLogisticsApp.Services
         public decimal NewDrivers;
         public decimal ActiveDrivers;
 
+        /// <summary>Mean hours from booking to delivery for parcels delivered in the period; null when none were.</summary>
+        public decimal? AvgDeliveryHours;
+
+        /// <summary>Invoiced / Booked; null when nothing was booked.</summary>
+        public decimal? RevenuePerShipment
+        {
+            get { return Booked == 0m ? (decimal?)null : Math.Round(Invoiced / Booked, 2, MidpointRounding.AwayFromZero); }
+        }
+
         /// <summary>Delivered / (Delivered + Failed attempts); null when neither happened in the period.</summary>
         public decimal? SuccessRate
         {
@@ -135,6 +144,32 @@ namespace ForteLogisticsApp.Services
         public int Drivers;
         public int DriversAvailable;
         public int DriversOnRoute;
+    }
+
+    /// <summary>
+    /// Unpaid money billed in a period, split by whether it is already past its due date. An
+    /// invoice's due date is Payment.DueDate, or IssuedDate + DefaultPaymentTermsDays when the
+    /// invoice was raised without one (online bookings leave it empty).
+    /// </summary>
+    public sealed class Receivables
+    {
+        public decimal Outstanding;
+        public decimal Overdue;
+        public int OverdueInvoices;
+        public int OldestOverdueDays;
+
+        public decimal NotYetDue
+        {
+            get { return Outstanding - Overdue; }
+        }
+    }
+
+    /// <summary>Parcels sitting at one delivery stage for longer than the "stuck" threshold.</summary>
+    public sealed class StuckStage
+    {
+        public string Status;
+        public int Count;
+        public int OldestDays;
     }
 
     /// <summary>Everything one report or dashboard needs for a period, plus the previous period for comparison.</summary>
@@ -269,6 +304,40 @@ namespace ForteLogisticsApp.Services
             "  SELECT s.DriverID FROM dbo.[Shipment] s WHERE s.DriverID IS NOT NULL AND " + LegacyFailed + " AND " + ShipScope +
             ") x" + Recompile;
 
+        /// <summary>Payment terms assumed for an invoice raised without a due date (the demo data uses 7 days).</summary>
+        public const int DefaultPaymentTermsDays = 7;
+
+        // Keep the literal 7 in step with DefaultPaymentTermsDays (SQL text must stay constant).
+        private const string DueOn = "ISNULL(p.DueDate, DATEADD(day, 7, p.IssuedDate))";
+
+        private const string AvgDeliverySql =
+            "SELECT AVG(CAST(DATEDIFF(MINUTE, s.ShipmentDate, s.DeliveryDate) AS DECIMAL(18,2))) / 60.0 " +
+            "FROM dbo.[Shipment] s " +
+            "WHERE s.DeliveryStatus = 'Delivered' AND s.DeliveryDate >= @f AND s.DeliveryDate < @t " +
+            "AND s.DeliveryDate >= s.ShipmentDate AND " + ShipScope + Recompile;
+
+        private const string ReceivablesSql =
+            "SELECT ISNULL(SUM(p.Amount), 0) AS Outstanding, " +
+            "ISNULL(SUM(CASE WHEN " + DueOn + " < @asOf THEN p.Amount ELSE 0 END), 0) AS Overdue, " +
+            "ISNULL(SUM(CASE WHEN " + DueOn + " < @asOf THEN 1 ELSE 0 END), 0) AS OverdueCount, " +
+            "ISNULL(MAX(CASE WHEN " + DueOn + " < @asOf THEN DATEDIFF(day, " + DueOn + ", @asOf) END), 0) AS Oldest " +
+            "FROM dbo.[Payment] p " +
+            "WHERE p.PaymentStatus NOT IN ('Paid', 'Cancelled') AND p.IssuedDate >= @f AND p.IssuedDate < @t AND " + PayScope + Recompile;
+
+        private const string StuckSql =
+            "SELECT s.DeliveryStatus AS St, COUNT(*) AS N, " +
+            "MAX(DATEDIFF(day, ISNULL(s.LastStatusChange, s.ShipmentDate), @asOf)) AS Oldest " +
+            "FROM dbo.[Shipment] s " +
+            "WHERE s.DeliveryStatus NOT IN ('Delivered', 'Failed') " +
+            "AND ISNULL(s.LastStatusChange, s.ShipmentDate) < @cut AND " + ShipScope +
+            " GROUP BY s.DeliveryStatus ORDER BY N DESC" + Recompile;
+
+        private const string TopCustomersSql =
+            "SELECT TOP (@n) ISNULL(u.FullName, 'Unknown customer') AS Name, SUM(p.Amount) AS V " +
+            "FROM dbo.[Payment] p LEFT JOIN dbo.[User] u ON u.UserID = p.ClientID " +
+            "WHERE p.PaymentStatus <> 'Cancelled' AND p.IssuedDate >= @f AND p.IssuedDate < @t " +
+            "GROUP BY p.ClientID, u.FullName ORDER BY V DESC, Name";
+
         private const string CohortSql =
             "SELECT s.DeliveryStatus AS St, COUNT(*) AS N, " +
             "SUM(CASE WHEN s.ExceptionType = 'Lost' THEN 1 ELSE 0 END) AS Lost, " +
@@ -336,9 +405,9 @@ namespace ForteLogisticsApp.Services
             snap.PrevInvoiced = Align(prev.Rollup(invoiced), n);
 
             snap.Current = Totals(period, booked, delivered, failed, invoiced, collected, newCustomers, newDrivers,
-                ActiveDrivers(scope, period.From, period.ToExclusive));
+                ActiveDrivers(scope, period.From, period.ToExclusive), AvgDeliveryHours(scope, period.From, period.ToExclusive));
             snap.Previous = Totals(prev, booked, delivered, failed, invoiced, collected, newCustomers, newDrivers,
-                ActiveDrivers(scope, prev.From, prev.ToExclusive));
+                ActiveDrivers(scope, prev.From, prev.ToExclusive), AvgDeliveryHours(scope, prev.From, prev.ToExclusive));
 
             snap.Cohort = Cohort(scope, period.From, period.ToExclusive);
             snap.Pipeline = BuildPipeline(snap.Cohort.ByStatus);
@@ -357,7 +426,7 @@ namespace ForteLogisticsApp.Services
                 Daily(BookedSql, scope, f, t), Daily(DeliveredSql, scope, f, t), Daily(FailedSql, scope, f, t),
                 Daily(InvoicedSql, scope, f, t), Daily(CollectedSql, scope, f, t),
                 Daily(NewCustomersSql, scope, f, t), Daily(NewDriversSql, scope, f, t),
-                ActiveDrivers(scope, f, t));
+                ActiveDrivers(scope, f, t), AvgDeliveryHours(scope, f, t));
         }
 
         public static CohortSummary Cohort(AnalyticsScope scope, DateTime from, DateTime toExclusive)
@@ -453,6 +522,62 @@ namespace ForteLogisticsApp.Services
         }
 
         /// <summary>
+        /// Unpaid, uncancelled money billed in the period, and how much of it is past due as at
+        /// <paramref name="asOf"/>. Customers see their own; drivers see none.
+        /// </summary>
+        public static Receivables ReceivablesFor(AnalyticsScope scope, DateTime from, DateTime toExclusive, DateTime asOf)
+        {
+            RequireScope(scope);
+            DataTable dt = Db.Query(ReceivablesSql, With(Params(scope, from, toExclusive), "@asOf", asOf));
+            var r = new Receivables();
+            if (dt.Rows.Count == 0) return r;
+            DataRow row = dt.Rows[0];
+            r.Outstanding = Db.ToDecimal(row["Outstanding"]);
+            r.Overdue = Db.ToDecimal(row["Overdue"]);
+            r.OverdueInvoices = Db.ToInt(row["OverdueCount"]);
+            r.OldestOverdueDays = Db.ToInt(row["Oldest"]);
+            return r;
+        }
+
+        /// <summary>
+        /// Parcels that are neither delivered nor failed and have not changed status for more than
+        /// <paramref name="olderThanDays"/> days as at <paramref name="asOf"/>, grouped by the stage
+        /// they are stuck at (busiest first). A point-in-time check, not tied to a period.
+        /// </summary>
+        public static IList<StuckStage> StuckParcels(AnalyticsScope scope, DateTime asOf, int olderThanDays)
+        {
+            RequireScope(scope);
+            DataTable dt = Db.Query(StuckSql,
+                "@asOf", asOf, "@cut", asOf.AddDays(-Math.Max(0, olderThanDays)),
+                "@sk", (int)scope.Kind, "@su", scope.UserId);
+
+            var list = new List<StuckStage>();
+            foreach (DataRow r in dt.Rows)
+            {
+                list.Add(new StuckStage
+                {
+                    Status = Db.ToStr(r["St"]),
+                    Count = Db.ToInt(r["N"]),
+                    OldestDays = Db.ToInt(r["Oldest"])
+                });
+            }
+            return list;
+        }
+
+        /// <summary>Customers ranked by money invoiced in the period (company view only).</summary>
+        public static IList<NamedValue> TopCustomers(AnalyticsScope scope, DateTime from, DateTime toExclusive, int top)
+        {
+            RequireCompany(scope);
+            var list = new List<NamedValue>();
+            foreach (DataRow r in Db.Query(TopCustomersSql, "@f", from, "@t", toExclusive,
+                         "@n", Math.Max(1, Math.Min(top, 50))).Rows)
+            {
+                list.Add(new NamedValue(Db.ToStr(r["Name"]), Db.ToDecimal(r["V"])));
+            }
+            return list;
+        }
+
+        /// <summary>
         /// How far the period's booked shipments got. A stage counts every shipment that has
         /// reached it OR gone past it, so the funnel only ever narrows. Parcels that ended Failed
         /// went out for delivery, so they count up to that stage and are reported as a side
@@ -533,7 +658,7 @@ namespace ForteLogisticsApp.Services
             Dictionary<DateTime, decimal> booked, Dictionary<DateTime, decimal> delivered,
             Dictionary<DateTime, decimal> failed, Dictionary<DateTime, decimal> invoiced,
             Dictionary<DateTime, decimal> collected, Dictionary<DateTime, decimal> newCustomers,
-            Dictionary<DateTime, decimal> newDrivers, int activeDrivers)
+            Dictionary<DateTime, decimal> newDrivers, int activeDrivers, decimal? avgDeliveryHours)
         {
             return new PeriodTotals
             {
@@ -544,13 +669,30 @@ namespace ForteLogisticsApp.Services
                 Collected = p.Total(collected),
                 NewCustomers = p.Total(newCustomers),
                 NewDrivers = p.Total(newDrivers),
-                ActiveDrivers = activeDrivers
+                ActiveDrivers = activeDrivers,
+                AvgDeliveryHours = avgDeliveryHours
             };
         }
 
         private static int ActiveDrivers(AnalyticsScope scope, DateTime from, DateTime toExclusive)
         {
             return Db.ToInt(Db.Scalar(ActiveDriversSql, Params(scope, from, toExclusive)));
+        }
+
+        private static decimal? AvgDeliveryHours(AnalyticsScope scope, DateTime from, DateTime toExclusive)
+        {
+            object v = Db.Scalar(AvgDeliverySql, Params(scope, from, toExclusive));
+            if (v == null || v == DBNull.Value) return null;
+            return Math.Round(Db.ToDecimal(v), 1, MidpointRounding.AwayFromZero);
+        }
+
+        private static object[] With(object[] pairs, string name, object value)
+        {
+            var result = new object[pairs.Length + 2];
+            pairs.CopyTo(result, 0);
+            result[pairs.Length] = name;
+            result[pairs.Length + 1] = value;
+            return result;
         }
 
         private static Dictionary<DateTime, decimal> Daily(string sql, AnalyticsScope scope, DateTime from, DateTime toExclusive)

@@ -8,31 +8,54 @@ namespace ForteLogisticsApp.Services
 {
     /// <summary>
     /// Server-rendered building blocks shared by every report and dashboard: section headings,
-    /// KPI cards, chart cards, tables, the exceptions list and the delivery-pipeline schematic.
+    /// KPI cards, chart cards, tables, the attention list and the delivery-pipeline schematic.
     /// Built here, like Site1.Master's navigation, so the markup and its accessibility rules
-    /// live in one place. Every text value is HTML-encoded on the way out; numbers are
-    /// formatted server-side.
+    /// live in one place. Every text value is HTML-encoded on the way out.
     ///
     /// Accessibility rules applied throughout:
     ///   - a change is described in words ("up 12.5% ... (favourable)"), never by colour alone;
     ///   - every chart has a visible title, a one-line summary and a data table that starts
     ///     OPEN and is only collapsed by Scripts/lc-charts.js once the chart has drawn - so with
     ///     no JavaScript, or a failed chart, the numbers are still on the page;
+    ///   - tables give each row a row header, so a screen reader names the row it is reading;
     ///   - the pipeline schematic is real text, so it reads correctly with no JavaScript.
     ///
-    /// Pages put this markup into Literals with EnableViewState="false" - it is rebuilt on
-    /// every request and must not ride along in __VIEWSTATE.
+    /// Numbers use ONE fixed format on every machine (space thousands separator, "." decimal
+    /// point): a report must read the same on any PC, and Windows versions disagree about the
+    /// en-ZA decimal separator. Pages put this markup into Literals with EnableViewState="false".
     /// </summary>
     public static class ReportHtml
     {
-        public static string Count(decimal value)
+        /// <summary>The report number format: "1 234 567.89" (non-breaking space between thousands).</summary>
+        public static readonly NumberFormatInfo Numbers = CreateNumbers();
+
+        private static NumberFormatInfo CreateNumbers()
         {
-            return value.ToString("N0", CultureInfo.CurrentCulture);
+            var nf = (NumberFormatInfo)CultureInfo.InvariantCulture.NumberFormat.Clone();
+            nf.NumberGroupSeparator = ((char)0xA0).ToString();
+            nf.NumberDecimalSeparator = ".";
+            return nf;
         }
 
+        public static string Count(decimal value)
+        {
+            return value.ToString("N0", Numbers);
+        }
+
+        /// <summary>"R 58 924.50" - the space after R is non-breaking too, so an amount never wraps.</summary>
         public static string Money(decimal value)
         {
-            return "R " + value.ToString("N2", CultureInfo.CurrentCulture);
+            return "R" + Numbers.NumberGroupSeparator + value.ToString("N2", Numbers);
+        }
+
+        /// <summary>A duration in hours, shown in hours under two days and in days after that.</summary>
+        public static string Duration(decimal? hours)
+        {
+            if (hours == null) return "n/a";
+            decimal h = hours.Value;
+            return h < 48m
+                ? h.ToString("0.0", Numbers) + " hours"
+                : (h / 24m).ToString("0.0", Numbers) + " days";
         }
 
         /// <summary>An h2 section heading with a decorative icon.</summary>
@@ -45,62 +68,50 @@ namespace ForteLogisticsApp.Services
         /// <summary>
         /// A KPI with a period-over-period change line. The verdict ("favourable" /
         /// "unfavourable") is spelled out, because "up 12%" is good news for revenue and bad
-        /// news for failed deliveries and colour alone must not be what tells them apart.
+        /// news for failed deliveries and colour alone must not tell them apart. There is no
+        /// verdict when there was nothing to compare against, or when the change rounds to 0.
         /// </summary>
         public static string Kpi(string icon, string label, string value, decimal current, decimal previous,
             bool higherIsBetter, string hint = null)
         {
             int dir = Delta.Direction(current, previous);
-            string tone = dir == 0 ? "flat" : ((dir > 0) == higherIsBetter ? "good" : "bad");
-            string arrow = dir > 0 ? "arrow_upward" : dir < 0 ? "arrow_downward" : "remove";
-            string verdict = tone == "good" ? " (favourable)" : tone == "bad" ? " (unfavourable)" : string.Empty;
+            bool noBase = previous == 0m && current != 0m;
+            decimal? pct = Delta.PercentChange(current, previous);
+            bool negligible = pct != null && pct.Value == 0m;
 
-            var sb = new StringBuilder();
-            sb.Append("<div class='lc-kpi'>")
-              .Append("<div class='lc-kpi-head'><span class='material-symbols-outlined' aria-hidden='true'>")
-              .Append(Enc(icon)).Append("</span><span class='lc-kpi-label'>").Append(Enc(label)).Append("</span></div>")
-              .Append("<div class='lc-kpi-value'>").Append(Enc(value)).Append("</div>")
-              .Append("<div class='lc-kpi-delta lc-tone-").Append(tone).Append("'>")
-              .Append("<span class='material-symbols-outlined' aria-hidden='true'>").Append(arrow).Append("</span>")
-              .Append(Enc(Delta.Describe(current, previous) + verdict)).Append("</div>");
-            if (!string.IsNullOrEmpty(hint))
-            {
-                sb.Append("<div class='lc-kpi-hint'>").Append(Enc(hint)).Append("</div>");
-            }
-            sb.Append("</div>");
-            return sb.ToString();
+            string tone = dir == 0 || noBase || negligible ? "flat" : ((dir > 0) == higherIsBetter ? "good" : "bad");
+            string arrow = noBase ? "fiber_new" : negligible || dir == 0 ? "remove" : dir > 0 ? "arrow_upward" : "arrow_downward";
+            return Card(icon, label, value, tone, arrow, Delta.Describe(current, previous) + Verdict(tone), hint);
         }
 
         /// <summary>A rate KPI (e.g. delivery success) whose change is stated in percentage points.</summary>
         public static string KpiRate(string icon, string label, decimal? current, decimal? previous,
             bool higherIsBetter, string hint = null)
         {
-            int dir = (current == null || previous == null) ? 0 : Delta.Direction(current.Value, previous.Value);
+            decimal? diff = (current == null || previous == null)
+                ? (decimal?)null
+                : Math.Round(current.Value - previous.Value, 1, MidpointRounding.AwayFromZero);
+            int dir = diff == null || diff.Value == 0m ? 0 : diff.Value > 0 ? 1 : -1;
             string tone = dir == 0 ? "flat" : ((dir > 0) == higherIsBetter ? "good" : "bad");
             string arrow = dir > 0 ? "arrow_upward" : dir < 0 ? "arrow_downward" : "remove";
-            string verdict = tone == "good" ? " (favourable)" : tone == "bad" ? " (unfavourable)" : string.Empty;
-
-            var sb = new StringBuilder();
-            sb.Append("<div class='lc-kpi'>")
-              .Append("<div class='lc-kpi-head'><span class='material-symbols-outlined' aria-hidden='true'>")
-              .Append(Enc(icon)).Append("</span><span class='lc-kpi-label'>").Append(Enc(label)).Append("</span></div>")
-              .Append("<div class='lc-kpi-value'>").Append(Enc(Delta.FormatRate(current))).Append("</div>")
-              .Append("<div class='lc-kpi-delta lc-tone-").Append(tone).Append("'>")
-              .Append("<span class='material-symbols-outlined' aria-hidden='true'>").Append(arrow).Append("</span>")
-              .Append(Enc(Delta.DescribePoints(current, previous) + verdict)).Append("</div>");
-            if (!string.IsNullOrEmpty(hint))
-            {
-                sb.Append("<div class='lc-kpi-hint'>").Append(Enc(hint)).Append("</div>");
-            }
-            sb.Append("</div>");
-            return sb.ToString();
+            return Card(icon, label, Delta.FormatRate(current), tone, arrow,
+                Delta.DescribePoints(current, previous) + Verdict(tone), hint);
         }
 
-        /// <summary>A point-in-time figure with no comparison (e.g. drivers on route right now).</summary>
+        /// <summary>A KPI for a quantity where any change is described by a caller-supplied phrase.</summary>
+        public static string KpiCustom(string icon, string label, string value, int direction, bool higherIsBetter,
+            string changeText, string hint = null)
+        {
+            string tone = direction == 0 ? "flat" : ((direction > 0) == higherIsBetter ? "good" : "bad");
+            string arrow = direction > 0 ? "arrow_upward" : direction < 0 ? "arrow_downward" : "remove";
+            return Card(icon, label, value, tone, arrow, changeText + Verdict(tone), hint);
+        }
+
+        /// <summary>A point-in-time or uncompared figure (e.g. drivers on route right now).</summary>
         public static string Stat(string icon, string label, string value, string hint = null)
         {
             var sb = new StringBuilder();
-            sb.Append("<div class='lc-kpi'>")
+            sb.Append("<div class='lc-kpi' role='group' aria-label='").Append(Enc(label)).Append("'>")
               .Append("<div class='lc-kpi-head'><span class='material-symbols-outlined' aria-hidden='true'>")
               .Append(Enc(icon)).Append("</span><span class='lc-kpi-label'>").Append(Enc(label)).Append("</span></div>")
               .Append("<div class='lc-kpi-value'>").Append(Enc(value)).Append("</div>");
@@ -110,6 +121,30 @@ namespace ForteLogisticsApp.Services
             }
             sb.Append("</div>");
             return sb.ToString();
+        }
+
+        private static string Card(string icon, string label, string value, string tone, string arrow,
+            string changeText, string hint)
+        {
+            var sb = new StringBuilder();
+            sb.Append("<div class='lc-kpi' role='group' aria-label='").Append(Enc(label)).Append("'>")
+              .Append("<div class='lc-kpi-head'><span class='material-symbols-outlined' aria-hidden='true'>")
+              .Append(Enc(icon)).Append("</span><span class='lc-kpi-label'>").Append(Enc(label)).Append("</span></div>")
+              .Append("<div class='lc-kpi-value'>").Append(Enc(value)).Append("</div>")
+              .Append("<div class='lc-kpi-delta lc-tone-").Append(tone).Append("'>")
+              .Append("<span class='material-symbols-outlined' aria-hidden='true'>").Append(arrow).Append("</span>")
+              .Append(Enc(changeText)).Append("</div>");
+            if (!string.IsNullOrEmpty(hint))
+            {
+                sb.Append("<div class='lc-kpi-hint'>").Append(Enc(hint)).Append("</div>");
+            }
+            sb.Append("</div>");
+            return sb.ToString();
+        }
+
+        private static string Verdict(string tone)
+        {
+            return tone == "good" ? " (favourable)" : tone == "bad" ? " (unfavourable)" : string.Empty;
         }
 
         /// <summary>
@@ -158,33 +193,59 @@ namespace ForteLogisticsApp.Services
         }
 
         /// <summary>
-        /// An accessible table in the app's report-table style: columns scoped, an (off-screen)
-        /// caption, and a horizontally scrollable region that keyboard users can focus.
+        /// An accessible table in the app's report-table style: an (off-screen) caption, a row
+        /// header in the first column of every row, and a horizontally scrollable region that
+        /// keyboard users can focus. <paramref name="lastRowIsTotal"/> moves the final row into
+        /// a bold, ruled footer; <paramref name="numeric"/> right-aligns every column after the
+        /// first so figures line up.
         /// </summary>
-        public static string Table(string[] headers, IList<string[]> rows, string caption = null)
+        public static string Table(string[] headers, IList<string[]> rows, string caption = null,
+            bool lastRowIsTotal = false, bool numeric = false)
         {
             string label = string.IsNullOrEmpty(caption) ? "Data table" : caption;
+            int bodyRows = lastRowIsTotal && rows.Count > 0 ? rows.Count - 1 : rows.Count;
+
             var sb = new StringBuilder();
             sb.Append("<div class='lc-table-scroll' role='region' tabindex='0' aria-label='")
-              .Append(Enc(label + " (table)")).Append("'><table class='report-table'>")
+              .Append(Enc(label + " (table)")).Append("'><table class='report-table")
+              .Append(numeric ? " lc-table-num" : "").Append("'>")
               .Append("<caption class='lc-sr-only'>").Append(Enc(label)).Append("</caption><thead><tr>");
             foreach (string h in headers) sb.Append("<th scope='col'>").Append(Enc(h)).Append("</th>");
             sb.Append("</tr></thead><tbody>");
-            foreach (string[] row in rows)
+            for (int i = 0; i < bodyRows; i++)
             {
-                sb.Append("<tr>");
-                foreach (string cell in row) sb.Append("<td>").Append(Enc(cell)).Append("</td>");
-                sb.Append("</tr>");
+                AppendRow(sb, rows[i], null);
             }
-            sb.Append("</tbody></table></div>");
+            sb.Append("</tbody>");
+
+            if (bodyRows < rows.Count)
+            {
+                sb.Append("<tfoot>");
+                AppendRow(sb, rows[rows.Count - 1], "lc-total");
+                sb.Append("</tfoot>");
+            }
+            sb.Append("</table></div>");
             return sb.ToString();
         }
 
+        private static void AppendRow(StringBuilder sb, string[] row, string cssClass)
+        {
+            sb.Append(cssClass == null ? "<tr>" : "<tr class='" + cssClass + "'>");
+            for (int c = 0; c < row.Length; c++)
+            {
+                if (c == 0) sb.Append("<th scope='row'>").Append(Enc(row[c])).Append("</th>");
+                else sb.Append("<td>").Append(Enc(row[c])).Append("</td>");
+            }
+            sb.Append("</tr>");
+        }
+
         /// <summary>
-        /// The "flagged for attention" list. Each item gets a warning icon and an amber edge;
-        /// with nothing to flag, a clear "all clear" line is shown instead of an empty box.
+        /// The "Needs attention" list. Each item states its priority in words, what was found,
+        /// and where to go to act on it. <paramref name="resolveUrl"/> turns an app-relative
+        /// "~/..." link into a real URL (the page's ResolveUrl). With nothing to flag, a clear
+        /// "all clear" line is shown instead of an empty box.
         /// </summary>
-        public static string Exceptions(IList<string> items, string allClearText)
+        public static string Attention(IList<AttentionItem> items, string allClearText, Func<string, string> resolveUrl)
         {
             if (items == null || items.Count == 0)
             {
@@ -194,13 +255,39 @@ namespace ForteLogisticsApp.Services
 
             var sb = new StringBuilder();
             sb.Append("<ul class='lc-exceptions' role='list'>");
-            foreach (string item in items)
+            foreach (AttentionItem item in items)
             {
-                sb.Append("<li><span class='material-symbols-outlined' aria-hidden='true'>warning</span><span>")
-                  .Append(Enc(item)).Append("</span></li>");
+                string level = item.Severity == AttentionSeverity.High ? "high"
+                             : item.Severity == AttentionSeverity.Medium ? "medium" : "info";
+                string word = item.Severity == AttentionSeverity.High ? "Act now"
+                            : item.Severity == AttentionSeverity.Medium ? "Check" : "Note";
+                string icon = item.Severity == AttentionSeverity.High ? "error" : item.Severity == AttentionSeverity.Medium ? "warning" : "info";
+
+                sb.Append("<li class='lc-att-").Append(level).Append("'>")
+                  .Append("<span class='material-symbols-outlined' aria-hidden='true'>").Append(icon).Append("</span>")
+                  .Append("<div><strong class='lc-att-level'>").Append(word).Append(":</strong> ")
+                  .Append(Enc(item.Text));
+                if (!string.IsNullOrEmpty(item.Href) && resolveUrl != null)
+                {
+                    sb.Append(" <a class='fcl-link lc-att-link' href='").Append(Enc(resolveUrl(item.Href))).Append("'>")
+                      .Append(Enc(string.IsNullOrEmpty(item.LinkText) ? "Open" : item.LinkText))
+                      .Append("<span class='material-symbols-outlined' aria-hidden='true'>arrow_forward</span></a>");
+                }
+                sb.Append("</div></li>");
             }
             sb.Append("</ul>");
             return sb.ToString();
+        }
+
+        /// <summary>Plain-text list version of <see cref="Attention"/> (kept for simple callers).</summary>
+        public static string Exceptions(IList<string> items, string allClearText)
+        {
+            var converted = new List<AttentionItem>();
+            if (items != null)
+            {
+                foreach (string s in items) converted.Add(new AttentionItem(AttentionSeverity.Medium, s));
+            }
+            return Attention(converted, allClearText, null);
         }
 
         /// <summary>
@@ -208,8 +295,7 @@ namespace ForteLogisticsApp.Services
         /// its count, a bar scaled to the first stage, and the share of the previous stage that
         /// made it this far. The stage that loses the most parcels is outlined and labelled
         /// "Biggest drop-off", and parcels that ended Failed are shown as a branch off "Out for
-        /// delivery". Both the stages and the failed branch come from the same cohort, so the
-        /// branch percentage can never exceed 100%.
+        /// delivery". Both come from the same cohort, so the branch can never exceed 100%.
         /// </summary>
         public static string Pipeline(IList<PipelineStage> stages, CohortSummary cohort, string caption, int headingLevel = 3)
         {
@@ -254,7 +340,7 @@ namespace ForteLogisticsApp.Services
 
             int outForDelivery = stages.Count >= 4 ? stages[3].Value : 0;
             sb.Append("<p class='lc-pipe-branch'><span class='material-symbols-outlined' aria-hidden='true'>call_split</span>")
-              .Append("Ended as failed deliveries: <strong>").Append(Count(failed)).Append("</strong>");
+              .Append("Parcels that ended as failed deliveries: <strong>").Append(Count(failed)).Append("</strong>");
             if (outForDelivery > 0)
             {
                 sb.Append(" (").Append(Enc(Delta.FormatRate(Delta.Rate(failed, outForDelivery)))).Append(" of parcels sent out for delivery)");
@@ -278,6 +364,31 @@ namespace ForteLogisticsApp.Services
         private static string Enc(string value)
         {
             return HttpUtility.HtmlEncode(value ?? string.Empty);
+        }
+    }
+
+    public enum AttentionSeverity
+    {
+        High = 0,
+        Medium = 1,
+        Info = 2
+    }
+
+    /// <summary>One "Needs attention" finding: what was found, how urgent, and where to act on it.</summary>
+    public sealed class AttentionItem
+    {
+        public AttentionSeverity Severity;
+        public string Text;
+        /// <summary>App-relative link ("~/Finance/Invoices.aspx") to the page where it can be acted on.</summary>
+        public string Href;
+        public string LinkText;
+
+        public AttentionItem(AttentionSeverity severity, string text, string href = null, string linkText = null)
+        {
+            Severity = severity;
+            Text = text;
+            Href = href;
+            LinkText = linkText;
         }
     }
 }

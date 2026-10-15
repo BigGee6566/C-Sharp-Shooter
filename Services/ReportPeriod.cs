@@ -166,12 +166,42 @@ namespace ForteLogisticsApp.Services
                    To.ToString("dd MMM yyyy", LabelCulture) + " (" + size + ")";
         }
 
+        /// <summary>
+        /// A sentence saying which week/month buckets are only partly inside the period, so a
+        /// short first or last bar is not mistaken for a drop. Null for daily periods and when
+        /// every bucket is whole.
+        /// </summary>
+        public string PartialNote()
+        {
+            if (Granularity == Granularity.Day) return null;
+            IList<DateTime> buckets = Buckets();
+            if (buckets.Count == 0) return null;
+
+            string unit = Granularity == Granularity.Week ? "week" : "month";
+            bool firstPartial = buckets[0] < From;
+            bool lastPartial = NextBucket(buckets[buckets.Count - 1], Granularity).AddDays(-1) > To;
+
+            if (firstPartial && lastPartial)
+                return "The first and last " + unit + "s are partial: only days inside the period are counted.";
+            if (firstPartial)
+                return "The first " + unit + " is partial: it starts on " + From.ToString("dd MMM", LabelCulture) + ".";
+            if (lastPartial)
+                return "The last " + unit + " is partial: it runs only to " + To.ToString("dd MMM", LabelCulture) + ".";
+            return null;
+        }
+
         /// <summary>Null when the range is acceptable, otherwise a user-facing reason.</summary>
         public static string Validate(DateTime from, DateTime to, Granularity granularity)
         {
+            return Validate(from, to, granularity, DateTime.Today);
+        }
+
+        /// <summary>As <see cref="Validate(DateTime, DateTime, Granularity)"/>, against an explicit "today" (testable).</summary>
+        public static string Validate(DateTime from, DateTime to, Granularity granularity, DateTime today)
+        {
             var p = new ReportPeriod(from, to, granularity);
             if (p.From.Year < 2000) return "Please choose a start date from the year 2000 onwards.";
-            if (p.To > DateTime.Today.AddYears(1)) return "The end date is too far in the future.";
+            if (p.To > today.Date.AddYears(1)) return "The end date is too far in the future.";
 
             int max = granularity == Granularity.Day ? MaxDailyDays
                     : granularity == Granularity.Week ? MaxWeeklyDays : MaxMonthlyDays;
