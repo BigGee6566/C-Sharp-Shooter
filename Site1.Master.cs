@@ -314,7 +314,18 @@ namespace ForteLogisticsApp
                     }
 
                     AddSection(sb, "Reports");
-                    AddLink(sb, "~/Reports/DailyParcelMovement.aspx", "analytics", "Reports", highlightForFolder: true);
+                    if (!isDriver)
+                    {
+                        // Office staff can open every report that shows no revenue.
+                        AddLink(sb, "~/Reports/DailyParcelMovement.aspx", "analytics", "Parcel Movement");
+                        AddLink(sb, "~/Reports/DriverPerformance.aspx", "speed", "Driver Performance");
+                        AddLink(sb, "~/Reports/LostDamaged.aspx", "report_problem", "Lost &amp; Damaged");
+                    }
+                    else
+                    {
+                        // A driver's movement report is limited to their own parcels.
+                        AddLink(sb, "~/Reports/DailyParcelMovement.aspx", "analytics", "My Parcel Movement", highlightForFolder: true);
+                    }
                     break;
 
                 case "Admin":
@@ -339,7 +350,7 @@ namespace ForteLogisticsApp
                     AddLink(sb, "~/Reports/Comparison.aspx", "compare_arrows", "Comparison");
                     AddLink(sb, "~/Reports/DailyParcelMovement.aspx", "analytics", "Parcel Movement");
                     AddLink(sb, "~/Reports/DriverPerformance.aspx", "speed", "Driver Performance");
-                    AddLink(sb, "~/Reports/MonthlyRevenue.aspx", "trending_up", "Monthly Revenue");
+                    AddLink(sb, "~/Reports/MonthlyRevenue.aspx", "trending_up", "Revenue");
                     AddLink(sb, "~/Reports/LostDamaged.aspx", "report_problem", "Lost &amp; Damaged");
                     break;
             }

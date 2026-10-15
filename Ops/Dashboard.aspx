@@ -35,7 +35,7 @@
             <a href='<%= ResolveUrl("~/Reports/DailyParcelMovement.aspx") %>' class="fcl-card rounded-xl p-5 hover:shadow-lg transition block">
                 <div class="text-brandDark text-2xl mb-2"><span class="material-symbols-outlined">show_chart</span></div>
                 <div class="font-bold text-brandDark">Reports</div>
-                <div class="text-xs text-on-surface-variant">Movement, revenue & more</div>
+                <div class="text-xs text-on-surface-variant">Parcel movement, drivers &amp; exceptions</div>
             </a>
         </div>
 

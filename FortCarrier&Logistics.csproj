@@ -171,6 +171,8 @@
     <Compile Include="Services\ReportQuery.cs" />
     <Compile Include="Services\PerformanceInsights.cs" />
     <Compile Include="Services\Comparison.cs" />
+    <Compile Include="Services\ReportRules.cs" />
+    <Compile Include="Reports\PeriodReportPage.cs" />
     <Compile Include="Reports\Comparison.aspx.cs">
       <DependentUpon>Reports\Comparison.aspx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>

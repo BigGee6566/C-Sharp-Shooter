@@ -193,6 +193,96 @@ namespace ForteLogisticsApp.Services
         }
 
         /// <summary>
+        /// A detail table showing at most <paramref name="maxRows"/> rows, with a note naming how
+        /// many were left out (the CSV export has them all). <paramref name="totalRows"/> is the true
+        /// row count when the caller fetched only the first rows; otherwise rows.Count is used.
+        /// </summary>
+        public static string DetailTable(string[] headers, IList<string[]> rows, string caption, string emptyText, bool numeric,
+            int maxRows, int? totalRows = null)
+        {
+            int total = Math.Max(totalRows ?? rows.Count, rows.Count);
+            if (total == 0)
+            {
+                return "<p class='lc-note'>" + Enc(emptyText) + "</p>";
+            }
+            IList<string[]> shown = rows;
+            string note = string.Empty;
+            if (rows.Count > maxRows)
+            {
+                var first = new List<string[]>();
+                for (int i = 0; i < maxRows; i++) first.Add(rows[i]);
+                shown = first;
+            }
+            if (total > shown.Count)
+            {
+                note = "<p class='lc-note'>Showing the first " + Count(shown.Count) + " of " + Count(total) +
+                       " rows. Export the CSV for all of them.</p>";
+            }
+            return note + "<div class='lc-chart-card'>" + Table(headers, shown, caption, false, numeric) + "</div>";
+        }
+
+        /// <summary>
+        /// A donut of the five largest categories with the rest as a grey "Other" slice (a donut
+        /// stops being readable beyond about six slices). <paramref name="format"/>: number | currency.
+        /// </summary>
+        public static string CategoryDonut(string id, string title, string summary, IDictionary<string, decimal> values,
+            string column, string format = "number", string extraClass = null)
+        {
+            List<KeyValuePair<string, decimal>> sorted = Largest(values);
+            var labels = new List<string>();
+            var data = new List<decimal>();
+            var tones = new List<string>();
+            decimal total = 0m, other = 0m;
+            foreach (KeyValuePair<string, decimal> kv in sorted) total += kv.Value;
+            foreach (KeyValuePair<string, decimal> kv in sorted)
+            {
+                if (labels.Count < 5) { labels.Add(kv.Key); data.Add(kv.Value); tones.Add(null); }
+                else other += kv.Value;
+            }
+            if (other > 0m) { labels.Add("Other"); data.Add(other); tones.Add("neutral"); }
+
+            var rows = new List<string[]>();
+            for (int i = 0; i < labels.Count; i++)
+            {
+                rows.Add(new[] { labels[i], FormatValue(data[i], format), Delta.FormatRate(Delta.Rate(data[i], total)) });
+            }
+            return ChartCard(id, title, summary, "donut", format, new { labels = labels, values = data, tones = tones },
+                new[] { column, format == "currency" ? "Amount" : "Count", "Share" }, rows, total == 0m, extraClass);
+        }
+
+        /// <summary>A horizontal bar chart of the <paramref name="top"/> largest categories, largest first.</summary>
+        public static string CategoryBars(string id, string title, string summary, IDictionary<string, decimal> values,
+            string column, int top, string format = "number", string tone = "primary", string extraClass = null)
+        {
+            var labels = new List<string>();
+            var data = new List<decimal>();
+            var rows = new List<string[]>();
+            string valueName = format == "currency" ? "Amount" : "Count";
+            foreach (KeyValuePair<string, decimal> kv in Largest(values))
+            {
+                if (labels.Count >= top || kv.Value == 0m) break;
+                labels.Add(kv.Key);
+                data.Add(kv.Value);
+                rows.Add(new[] { kv.Key, FormatValue(kv.Value, format) });
+            }
+            return ChartCard(id, title, summary, "hbar", format,
+                new { labels = labels, series = new object[] { new { label = valueName, data = data, tone = tone } } },
+                new[] { column, valueName }, rows, labels.Count == 0, extraClass);
+        }
+
+        private static List<KeyValuePair<string, decimal>> Largest(IDictionary<string, decimal> values)
+        {
+            var sorted = new List<KeyValuePair<string, decimal>>(values ?? new Dictionary<string, decimal>());
+            sorted.Sort((a, b) => b.Value != a.Value ? b.Value.CompareTo(a.Value) : string.CompareOrdinal(a.Key, b.Key));
+            return sorted;
+        }
+
+        private static string FormatValue(decimal v, string format)
+        {
+            return format == "currency" ? Money(v) : format == "percent" ? Delta.FormatRate(v) : Count(v);
+        }
+
+        /// <summary>
         /// An accessible table in the app's report-table style: an (off-screen) caption, a row
         /// header in the first column of every row, and a horizontally scrollable region that
         /// keyboard users can focus. <paramref name="lastRowIsTotal"/> moves the final row into

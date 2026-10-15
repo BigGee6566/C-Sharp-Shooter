@@ -117,6 +117,8 @@ namespace ForteLogisticsApp.Services
         public int Delivered;
         public int Failed;
         public decimal? AverageRating;
+        /// <summary>Ratings received in the period (an average from one or two ratings means little).</summary>
+        public int RatingCount;
 
         public decimal? SuccessRate
         {
@@ -442,7 +444,7 @@ namespace ForteLogisticsApp.Services
             " GROUP BY ISNULL(NULLIF(LTRIM(RTRIM(s.DestCity)), ''), 'Unknown') ORDER BY V DESC, Name" + Recompile;
 
         private const string DriverStandingsSql =
-            "SELECT d.UserID, u.FullName, ISNULL(dl.N, 0) AS Delivered, ISNULL(fa.N, 0) AS Failed, rt.AvgRating " +
+            "SELECT d.UserID, u.FullName, ISNULL(dl.N, 0) AS Delivered, ISNULL(fa.N, 0) AS Failed, rt.AvgRating, ISNULL(rt.N, 0) AS RatingCount " +
             "FROM dbo.[Driver] d JOIN dbo.[User] u ON u.UserID = d.UserID " +
             "LEFT JOIN (SELECT s.DriverID, COUNT(*) AS N FROM dbo.[Shipment] s " +
             "           WHERE s.DeliveryStatus = 'Delivered' AND s.DeliveryDate >= @f AND s.DeliveryDate < @t " +
@@ -453,7 +455,7 @@ namespace ForteLogisticsApp.Services
             "             UNION ALL " +
             "             SELECT s.DriverID FROM dbo.[Shipment] s WHERE " + LegacyFailed +
             "           ) x GROUP BY x.DriverID) fa ON fa.DriverID = d.UserID " +
-            "LEFT JOIN (SELECT r.DriverID, AVG(CAST(r.RatingScore AS DECIMAL(5,2))) AS AvgRating FROM dbo.[Rating] r " +
+            "LEFT JOIN (SELECT r.DriverID, AVG(CAST(r.RatingScore AS DECIMAL(5,2))) AS AvgRating, COUNT(*) AS N FROM dbo.[Rating] r " +
             "           WHERE r.CreatedDate >= @f AND r.CreatedDate < @t GROUP BY r.DriverID) rt ON rt.DriverID = d.UserID";
 
         /// <summary>
@@ -575,6 +577,7 @@ namespace ForteLogisticsApp.Services
                     Name = Db.ToStr(r["FullName"]),
                     Delivered = Db.ToInt(r["Delivered"]),
                     Failed = Db.ToInt(r["Failed"]),
+                    RatingCount = Db.ToInt(r["RatingCount"]),
                     AverageRating = r["AvgRating"] == DBNull.Value
                         ? (decimal?)null
                         : Math.Round(Db.ToDecimal(r["AvgRating"]), 1, MidpointRounding.AwayFromZero)
