@@ -164,6 +164,39 @@ namespace ForteLogisticsApp.Services
         }
     }
 
+    /// <summary>How the comparison report can split one period into groups.</summary>
+    public enum CompareDimension
+    {
+        /// <summary>Shipment.SortCategory - the service area / sort lane.</summary>
+        ServiceArea,
+        /// <summary>Client.ClientType of the sender - Business vs Individual.</summary>
+        ClientType,
+        /// <summary>The driver (attempts are credited to the driver who made them).</summary>
+        Driver
+    }
+
+    /// <summary>One group's figures for a period (company view only).</summary>
+    public sealed class GroupFigures
+    {
+        /// <summary>Stable identity of the group (a driver's ID, otherwise the name), for matching periods.</summary>
+        public string Key;
+        public string Name;
+        /// <summary>True for catch-all groups such as "Unassigned" or "Unknown", which are never named as findings.</summary>
+        public bool Placeholder;
+        /// <summary>Shipments booked by the same group in the previous period of equal length, when attached.</summary>
+        public int? PreviousBooked;
+        public int Booked;
+        public int Delivered;
+        public int Failed;
+        /// <summary>Money invoiced for the group; null where the split does not apply (drivers).</summary>
+        public decimal? Invoiced;
+
+        public decimal? SuccessRate
+        {
+            get { return Delta.Rate(Delivered, Delivered + Failed); }
+        }
+    }
+
     /// <summary>Parcels sitting at one delivery stage for longer than the "stuck" threshold.</summary>
     public sealed class StuckStage
     {
@@ -337,6 +370,64 @@ namespace ForteLogisticsApp.Services
             "FROM dbo.[Payment] p LEFT JOIN dbo.[User] u ON u.UserID = p.ClientID " +
             "WHERE p.PaymentStatus <> 'Cancelled' AND p.IssuedDate >= @f AND p.IssuedDate < @t " +
             "GROUP BY p.ClientID, u.FullName ORDER BY V DESC, Name";
+
+        // ---- Group comparison: one constant key expression (and join) per dimension ----
+        private const string LaneKey = "ISNULL(NULLIF(LTRIM(RTRIM(s.SortCategory)), ''), 'Not yet sorted')";
+        private const string ClientKey = "ISNULL(c.ClientType, 'Unknown')";
+        private const string ClientJoin = " LEFT JOIN dbo.[Client] c ON c.UserID = s.SenderID";
+        // Drivers are keyed "<UserID><US><FullName>" so two drivers with the same name stay apart.
+        private const string DriverKey =
+            "CASE WHEN du.UserID IS NULL THEN 'Unassigned' ELSE CAST(du.UserID AS varchar(12)) + CHAR(31) + ISNULL(du.FullName, '') END";
+        private const string DriverJoin = " LEFT JOIN dbo.[User] du ON du.UserID = s.DriverID";
+        private const string AttemptDriverKey =
+            "CASE WHEN au.UserID IS NULL THEN 'Unknown driver' ELSE CAST(au.UserID AS varchar(12)) + CHAR(31) + ISNULL(au.FullName, '') END";
+        private const char KeySeparator = (char)31;
+
+        /// <summary>The catch-all group names the queries above produce.</summary>
+        private static readonly HashSet<string> PlaceholderGroups = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "Not yet sorted", "Unknown", "Unassigned", "Unknown driver", "No shipment"
+        };
+        private const string AttemptDriverJoin = " LEFT JOIN dbo.[User] au ON au.UserID = th.DriverID";
+
+        private static readonly string LaneGroupSql = GroupSql(LaneKey, string.Empty, LaneKey, string.Empty);
+        private static readonly string ClientGroupSql = GroupSql(ClientKey, ClientJoin, ClientKey, ClientJoin);
+        private static readonly string DriverGroupSql = GroupSql(DriverKey, DriverJoin, AttemptDriverKey, AttemptDriverJoin);
+
+        private const string LaneInvoicedSql =
+            "SELECT CASE WHEN s.ShipmentID IS NULL THEN 'No shipment' ELSE " + LaneKey + " END AS Name, SUM(p.Amount) AS V " +
+            "FROM dbo.[Payment] p LEFT JOIN dbo.[Shipment] s ON s.ShipmentID = p.ShipmentID " +
+            "WHERE p.PaymentStatus <> 'Cancelled' AND p.IssuedDate >= @f AND p.IssuedDate < @t " +
+            "GROUP BY CASE WHEN s.ShipmentID IS NULL THEN 'No shipment' ELSE " + LaneKey + " END";
+
+        private const string ClientInvoicedSql =
+            "SELECT ISNULL(c.ClientType, 'Unknown') AS Name, SUM(p.Amount) AS V " +
+            "FROM dbo.[Payment] p LEFT JOIN dbo.[Client] c ON c.UserID = p.ClientID " +
+            "WHERE p.PaymentStatus <> 'Cancelled' AND p.IssuedDate >= @f AND p.IssuedDate < @t " +
+            "GROUP BY ISNULL(c.ClientType, 'Unknown')";
+
+        /// <summary>
+        /// Builds the per-group booked / delivered / failed-attempt query from constant fragments
+        /// only (called once, at type initialisation, with the constants above - never with
+        /// request data). Same metric definitions as the period totals.
+        /// </summary>
+        private static string GroupSql(string key, string joins, string attemptKey, string attemptJoins)
+        {
+            return
+                "SELECT x.K AS Name, SUM(x.B) AS Booked, SUM(x.D) AS Delivered, SUM(x.F) AS Failed FROM (" +
+                "  SELECT " + key + " AS K, 1 AS B, 0 AS D, 0 AS F FROM dbo.[Shipment] s" + joins +
+                "  WHERE s.ShipmentDate >= @f AND s.ShipmentDate < @t" +
+                "  UNION ALL" +
+                "  SELECT " + key + ", 0, 1, 0 FROM dbo.[Shipment] s" + joins +
+                "  WHERE s.DeliveryStatus = 'Delivered' AND s.DeliveryDate >= @f AND s.DeliveryDate < @t" +
+                "  UNION ALL" +
+                "  SELECT " + attemptKey + ", 0, 0, 1 FROM dbo.[TrackingHistory] th" +
+                "  JOIN dbo.[Shipment] s ON s.ShipmentID = th.ShipmentID" + attemptJoins +
+                "  WHERE " + AttemptEvent + " AND th.[Timestamp] >= @f AND th.[Timestamp] < @t" +
+                "  UNION ALL" +
+                "  SELECT " + key + ", 0, 0, 1 FROM dbo.[Shipment] s" + joins + " WHERE " + LegacyFailed +
+                ") x GROUP BY x.K";
+        }
 
         private const string CohortSql =
             "SELECT s.DeliveryStatus AS St, COUNT(*) AS N, " +
@@ -561,6 +652,71 @@ namespace ForteLogisticsApp.Services
                     OldestDays = Db.ToInt(r["Oldest"])
                 });
             }
+            return list;
+        }
+
+        /// <summary>
+        /// One period split by <paramref name="by"/> (company view only): booked, delivered and
+        /// failed attempts per group, plus money invoiced where that split applies. Largest
+        /// groups first.
+        /// </summary>
+        public static IList<GroupFigures> BreakdownBy(AnalyticsScope scope, CompareDimension by, DateTime from, DateTime toExclusive)
+        {
+            RequireCompany(scope);
+            string sql = by == CompareDimension.ClientType ? ClientGroupSql
+                       : by == CompareDimension.Driver ? DriverGroupSql : LaneGroupSql;
+
+            var groups = new Dictionary<string, GroupFigures>(StringComparer.OrdinalIgnoreCase);
+            var nameCount = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            foreach (DataRow r in Db.Query(sql, "@f", from, "@t", toExclusive).Rows)
+            {
+                string key = Db.ToStr(r["Name"]);
+                int cut = key.IndexOf(KeySeparator);
+                string name = cut < 0 ? key : key.Substring(cut + 1);
+                if (name.Length == 0) name = "Driver #" + key.Substring(0, cut);
+                groups[key] = new GroupFigures
+                {
+                    Key = key,
+                    Name = name,
+                    Placeholder = cut < 0 && PlaceholderGroups.Contains(name),
+                    Booked = Db.ToInt(r["Booked"]),
+                    Delivered = Db.ToInt(r["Delivered"]),
+                    Failed = Db.ToInt(r["Failed"])
+                };
+                int seen;
+                nameCount.TryGetValue(name, out seen);
+                nameCount[name] = seen + 1;
+            }
+            // Two drivers who share a name are told apart by their ID.
+            foreach (GroupFigures g in groups.Values)
+            {
+                int cut = g.Key.IndexOf(KeySeparator);
+                if (cut > 0 && nameCount[g.Name] > 1) g.Name += " (driver #" + g.Key.Substring(0, cut) + ")";
+            }
+
+            if (by != CompareDimension.Driver)
+            {
+                string moneySql = by == CompareDimension.ClientType ? ClientInvoicedSql : LaneInvoicedSql;
+                foreach (DataRow r in Db.Query(moneySql, "@f", from, "@t", toExclusive).Rows)
+                {
+                    string name = Db.ToStr(r["Name"]);
+                    GroupFigures g;
+                    if (!groups.TryGetValue(name, out g))
+                    {
+                        g = new GroupFigures { Key = name, Name = name, Placeholder = PlaceholderGroups.Contains(name) };
+                        groups[name] = g;
+                    }
+                    g.Invoiced = Db.ToDecimal(r["V"]);
+                }
+                foreach (GroupFigures g in groups.Values) if (g.Invoiced == null) g.Invoiced = 0m;
+            }
+
+            var list = new List<GroupFigures>(groups.Values);
+            list.Sort((a, b) =>
+            {
+                int byBooked = b.Booked.CompareTo(a.Booked);
+                return byBooked != 0 ? byBooked : string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase);
+            });
             return list;
         }
 

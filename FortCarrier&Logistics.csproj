@@ -115,6 +115,7 @@
     <Content Include="Reports\MonthlyRevenue.aspx" />
     <Content Include="Reports\LostDamaged.aspx" />
     <Content Include="Reports\Performance.aspx" />
+    <Content Include="Reports\Comparison.aspx" />
     <Content Include="Controls\ReportHeader.ascx" />
     <Content Include="Controls\ReportFooter.ascx" />
     <Content Include="Scripts\lc-charts.js" />
@@ -169,6 +170,11 @@
     <Compile Include="Services\ReportHtml.cs" />
     <Compile Include="Services\ReportQuery.cs" />
     <Compile Include="Services\PerformanceInsights.cs" />
+    <Compile Include="Services\Comparison.cs" />
+    <Compile Include="Reports\Comparison.aspx.cs">
+      <DependentUpon>Reports\Comparison.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
     <Compile Include="Reports\Performance.aspx.cs">
       <DependentUpon>Reports\Performance.aspx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>

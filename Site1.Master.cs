@@ -336,6 +336,7 @@ namespace ForteLogisticsApp
 
                     AddSection(sb, "Reports");
                     AddLink(sb, "~/Reports/Performance.aspx", "monitoring", "Business Performance");
+                    AddLink(sb, "~/Reports/Comparison.aspx", "compare_arrows", "Comparison");
                     AddLink(sb, "~/Reports/DailyParcelMovement.aspx", "analytics", "Parcel Movement");
                     AddLink(sb, "~/Reports/DriverPerformance.aspx", "speed", "Driver Performance");
                     AddLink(sb, "~/Reports/MonthlyRevenue.aspx", "trending_up", "Monthly Revenue");

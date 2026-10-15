@@ -267,6 +267,30 @@ namespace ForteLogisticsApp.Services
             return (pct.Value > 0 ? "up " : "down ") + mag + " vs previous period";
         }
 
+        /// <summary>
+        /// As <see cref="Describe"/>, but against a named baseline ("up 12.5% vs Period A"),
+        /// for comparisons that are not "this period vs the one before".
+        /// </summary>
+        public static string DescribeVersus(decimal current, decimal baseline, string baselineName)
+        {
+            if (current == baseline) return "no change vs " + baselineName;
+            decimal? pct = PercentChange(current, baseline);
+            if (pct == null) return "up from none in " + baselineName;
+            if (pct.Value == 0m) return "about the same as " + baselineName + " (under 0.1% change)";
+            string mag = Math.Abs(pct.Value).ToString("0.0", CultureInfo.InvariantCulture) + "%";
+            return (pct.Value > 0 ? "up " : "down ") + mag + " vs " + baselineName;
+        }
+
+        /// <summary>Rate change in percentage points against a named baseline.</summary>
+        public static string DescribePointsVersus(decimal? current, decimal? baseline, string baselineName)
+        {
+            if (current == null || baseline == null) return "not comparable (nothing to measure in one period)";
+            decimal diff = Math.Round(current.Value - baseline.Value, 1, MidpointRounding.AwayFromZero);
+            if (diff == 0m) return "no change vs " + baselineName;
+            return (diff > 0 ? "up " : "down ") +
+                   Math.Abs(diff).ToString("0.0", CultureInfo.InvariantCulture) + " percentage points vs " + baselineName;
+        }
+
         /// <summary>+1 when current is higher, -1 when lower, 0 when equal.</summary>
         public static int Direction(decimal current, decimal previous)
         {

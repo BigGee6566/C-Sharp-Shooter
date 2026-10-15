@@ -301,6 +301,52 @@ namespace ForteLogisticsApp.Tests.Integration
                 AnalyticsService.TopCustomers(AnalyticsScope.ForCustomer(customerA), January.From, January.ToExclusive, 5));
         }
 
+        [TestMethod]
+        public void Breakdown_by_customer_type_service_area_and_driver_matches_the_fixture()
+        {
+            AnalyticsScope company = AnalyticsScope.Company();
+
+            IList<GroupFigures> byType = AnalyticsService.BreakdownBy(company, CompareDimension.ClientType, January.From, January.ToExclusive);
+            GroupFigures individual = Group(byType, "Individual"), business = Group(byType, "Business");
+            Assert.AreEqual(2, individual.Booked, "A booked S1 and S2");
+            Assert.AreEqual(1, individual.Delivered);
+            Assert.AreEqual(1, individual.Failed, "S2");
+            Assert.AreEqual(175m, individual.Invoiced, "100 + 50 + 25; the cancelled one excluded");
+            Assert.AreEqual(2, business.Booked);
+            Assert.AreEqual(0, business.Delivered);
+            Assert.AreEqual(1, business.Failed, "the re-queued attempt at B's S3");
+            Assert.AreEqual(315m, business.Invoiced, "200 + 75 + 40");
+
+            IList<GroupFigures> byArea = AnalyticsService.BreakdownBy(company, CompareDimension.ServiceArea, January.From, January.ToExclusive);
+            GroupFigures unsorted = Group(byArea, "Not yet sorted");
+            Assert.AreEqual(4, unsorted.Booked, "no fixture parcel has a sort lane");
+            Assert.AreEqual(465m, unsorted.Invoiced, "every invoice tied to a shipment");
+            Assert.AreEqual(25m, Group(byArea, "No shipment").Invoiced, "the pending invoice has no shipment");
+
+            IList<GroupFigures> byDriver = AnalyticsService.BreakdownBy(company, CompareDimension.Driver, January.From, January.ToExclusive);
+            GroupFigures d1 = Group(byDriver, "Test Driver anD1");
+            Assert.AreEqual(3, d1.Booked);
+            Assert.AreEqual(1, d1.Delivered);
+            Assert.AreEqual(2, d1.Failed, "S2 plus D1's own re-queued attempt");
+            Assert.IsNull(d1.Invoiced, "no revenue split by driver");
+            Assert.AreEqual(1, Group(byDriver, "Unassigned").Booked, "S4 has no driver");
+            Assert.IsTrue(Group(byDriver, "Unassigned").Placeholder, "catch-all groups are flagged");
+            Assert.IsFalse(d1.Placeholder);
+            StringAssert.StartsWith(d1.Key, driver1.ToString(System.Globalization.CultureInfo.InvariantCulture) + (char)31,
+                "drivers are keyed by ID, so two with the same name stay apart");
+            Assert.IsTrue(unsorted.Placeholder);
+
+            Assert.ThrowsException<UnauthorizedAccessException>(() =>
+                AnalyticsService.BreakdownBy(AnalyticsScope.ForCustomer(customerA), CompareDimension.Driver, January.From, January.ToExclusive));
+        }
+
+        private static GroupFigures Group(IList<GroupFigures> groups, string name)
+        {
+            foreach (GroupFigures g in groups) if (g.Name == name) return g;
+            Assert.Fail("missing group " + name);
+            return null;
+        }
+
         private static DriverStanding Find(IList<DriverStanding> list, int id)
         {
             foreach (DriverStanding s in list) if (s.DriverId == id) return s;

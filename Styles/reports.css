@@ -317,3 +317,39 @@
 }
 .report-table.lc-table-num tfoot .lc-total td { text-align: right; font-variant-numeric: tabular-nums; }
 .report-table.lc-table-num td { white-space: nowrap; }
+
+/* ---------- Comparison report: mode tabs and highlights ---------- */
+.lc-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 16px; }
+.lc-tab {
+    display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 8px 16px;
+    border: 1px solid var(--lc-line); border-radius: 9999px; background: var(--lc-card);
+    color: var(--lc-ink); font-weight: 600; font-size: 14px; text-decoration: none;
+}
+.lc-tab:hover { background: var(--lc-soft); }
+.lc-tab:focus-visible { outline: 2px solid var(--lc-primary); outline-offset: 2px; }
+.lc-tab-current { background: var(--lc-primary); border-color: var(--lc-primary); color: #ffffff; }
+.lc-tab-current:hover { background: var(--lc-primary-2); }
+.lc-highlights { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.lc-highlights li {
+    display: flex; align-items: flex-start; gap: 8px; padding: 10px 12px; font-size: 14px; color: var(--lc-ink);
+    background: #eef2ff; border-left: 4px solid var(--lc-primary); border-radius: 0.375rem;
+}
+.lc-highlights li .material-symbols-outlined { color: var(--lc-primary); flex-shrink: 0; }
+@media print {
+    .lc-tabs { display: none !important; }
+    .lc-highlights li { break-inside: avoid; }
+}
+@media (forced-colors: active) {
+    .lc-tab-current { border: 3px solid Highlight; }
+}
+
+/* Period A / Period B date pairs, each a labelled group in the filter bar. */
+.lc-fieldset { display: flex; flex-wrap: wrap; gap: 12px; flex: 2 1 300px; margin: 0; padding: 0; border: 0; min-width: 0; }
+.lc-fieldset legend { flex-basis: 100%; padding: 0; margin-bottom: 4px; font-size: 13px; font-weight: 700; color: var(--lc-primary); }
+.lc-hint { font-size: 12px; color: var(--lc-muted); }
+.lc-filterbar .lc-field-wide { flex: 1 1 260px; min-width: 240px; }
+
+/* Charts with many bars get more height; long "Change" text may wrap instead of scrolling. */
+.lc-tall .lc-chart-hbar { height: 440px; }
+.lc-wrap-last .report-table.lc-table-num td:last-child { white-space: normal; min-width: 16ch; text-align: left; }
+.lc-wrap-last .report-table.lc-table-num thead th:last-child { text-align: left; }
