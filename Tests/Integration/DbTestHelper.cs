@@ -102,5 +102,42 @@ namespace ForteLogisticsApp.Tests.Integration
         {
             Db.NonQuery("DELETE FROM dbo.Business WHERE BusinessID = @b", "@b", businessId);
         }
+
+        /// <summary>Creates a Staff User plus its Driver registry row and returns the new UserID.</summary>
+        public static int CreateTestDriver(string prefix, string availability = "Available")
+        {
+            string email = prefix + "-" + Guid.NewGuid().ToString("N").Substring(0, 8) + "@test.invalid";
+            int userId = Db.Insert(
+                @"INSERT INTO dbo.[User] (FullName, Password, Email, Role)
+                  VALUES (@n, 'x', @e, 'Staff')",
+                "@n", "Test Driver " + prefix, "@e", email);
+
+            Db.NonQuery(
+                "INSERT INTO dbo.[Driver] (UserID, AvailabilityStatus) VALUES (@u, @a)",
+                "@u", userId, "@a", availability);
+
+            return userId;
+        }
+
+        public static void DeleteDriver(int userId)
+        {
+            Db.NonQuery("DELETE FROM dbo.AuditLog WHERE UserID = @u", "@u", userId);
+            Db.NonQuery("DELETE FROM dbo.[Driver] WHERE UserID = @u", "@u", userId);
+            Db.NonQuery("DELETE FROM dbo.[User] WHERE UserID = @u", "@u", userId);
+        }
+
+        /// <summary>Creates a minimal Route (no driver/vehicle/service-area) and returns its RouteID.</summary>
+        public static int CreateTestRoute(string prefix, string status = "Active")
+        {
+            return Db.Insert(
+                "INSERT INTO dbo.[Route] (RouteName, Status) VALUES (@n, @s)",
+                "@n", "TEST-" + prefix + "-" + Guid.NewGuid().ToString("N").Substring(0, 8), "@s", status);
+        }
+
+        public static void DeleteRoute(int routeId)
+        {
+            Db.NonQuery("DELETE FROM dbo.AuditLog WHERE Entity = 'Route' AND EntityID = @e", "@e", routeId.ToString());
+            Db.NonQuery("DELETE FROM dbo.[Route] WHERE RouteID = @r", "@r", routeId);
+        }
     }
 }
