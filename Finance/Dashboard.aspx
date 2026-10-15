@@ -11,11 +11,8 @@
             <a href='<%= ResolveUrl("~/Finance/Invoices.aspx") %>' class="fcl-btn inline-flex items-center gap-2"><span class="material-symbols-outlined">receipt_long</span> Manage Invoices</a>
         </div>
 
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            <div class="fcl-card rounded-xl p-4"><div class="text-xs font-bold uppercase text-on-surface-variant">Total Invoiced</div><div class="text-2xl font-black text-brandDark">R <asp:Literal ID="litInvoiced" runat="server">0</asp:Literal></div></div>
-            <div class="fcl-card rounded-xl p-4"><div class="text-xs font-bold uppercase text-on-surface-variant">Paid</div><div class="text-2xl font-black text-emerald-700">R <asp:Literal ID="litPaid" runat="server">0</asp:Literal></div></div>
-            <div class="fcl-card rounded-xl p-4"><div class="text-xs font-bold uppercase text-on-surface-variant">Outstanding</div><div class="text-2xl font-black text-brandRed">R <asp:Literal ID="litOutstanding" runat="server">0</asp:Literal></div></div>
-            <div class="fcl-card rounded-xl p-4"><div class="text-xs font-bold uppercase text-on-surface-variant">Uninvoiced Deliveries</div><div class="text-2xl font-black text-amber-600"><asp:Literal ID="litUninvoiced" runat="server">0</asp:Literal></div></div>
+        <div class="lc-dashboard mb-8">
+            <asp:Literal ID="litSummary" runat="server" EnableViewState="false" />
         </div>
 
         <div class="fcl-card rounded-xl p-6 overflow-x-auto">

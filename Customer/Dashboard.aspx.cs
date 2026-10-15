@@ -3,6 +3,7 @@ using System.Data;
 using System.Web.UI.WebControls;
 using ForteLogisticsApp.Data;
 using ForteLogisticsApp.Security;
+using ForteLogisticsApp.Services;
 
 namespace ForteLogisticsApp.CustomerPortal
 {
@@ -29,6 +30,7 @@ namespace ForteLogisticsApp.CustomerPortal
         protected Literal litBalanceDue;
         protected Literal litUnpaidCount;
         protected Button btnHeaderCreateOrder;
+        protected Literal litSummary;
 
         protected void Page_Load(object sender, EventArgs e)
         {
@@ -99,6 +101,10 @@ namespace ForteLogisticsApp.CustomerPortal
             rptNotifications.DataSource = notifications;
             rptNotifications.DataBind();
             pnlNoNotifs.Visible = notifications.Rows.Count == 0;
+
+            // Scoped to this customer's own shipments and invoices.
+            ChartAssets.Register(this);
+            litSummary.Text = RoleDashboards.Render(() => RoleDashboards.Customer(UserId, DateTime.Now, ResolveUrl), null);
         }
 
         protected void btnHeaderCreateOrder_Click(object sender, EventArgs e)

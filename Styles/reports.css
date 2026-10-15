@@ -353,3 +353,9 @@
 .lc-tall .lc-chart-hbar { height: 440px; }
 .lc-wrap-last .report-table.lc-table-num td:last-child { white-space: normal; min-width: 16ch; text-align: left; }
 .lc-wrap-last .report-table.lc-table-num thead th:last-child { text-align: left; }
+
+/* ---------- Role dashboards (Services/RoleDashboards.cs) ---------- */
+.lc-dashboard .lc-section-title:first-child { margin-top: 0; }
+.lc-dashboard .lc-kpis { margin-bottom: 16px; }
+.lc-dash-links { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 4px; }
+.lc-dash-links .fcl-btn { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; }

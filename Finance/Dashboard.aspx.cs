@@ -3,12 +3,13 @@ using System.Data;
 using System.Web.UI.WebControls;
 using ForteLogisticsApp.Data;
 using ForteLogisticsApp.Security;
+using ForteLogisticsApp.Services;
 
 namespace ForteLogisticsApp.Finance
 {
     public partial class Dashboard : SecurePage
     {
-        protected Literal litInvoiced, litPaid, litOutstanding, litUninvoiced;
+        protected Literal litSummary;
         protected Repeater rptInvoices;
         protected Panel pnlNone;
 
@@ -20,13 +21,11 @@ namespace ForteLogisticsApp.Finance
 
         private void LoadData()
         {
-            litInvoiced.Text = Db.ToDecimal(Db.Scalar("SELECT ISNULL(SUM(Amount),0) FROM dbo.[Payment]")).ToString("N2");
-            litPaid.Text = Db.ToDecimal(Db.Scalar("SELECT ISNULL(SUM(Amount),0) FROM dbo.[Payment] WHERE PaymentStatus = 'Paid'")).ToString("N2");
-            litOutstanding.Text = Db.ToDecimal(Db.Scalar("SELECT ISNULL(SUM(Amount),0) FROM dbo.[Payment] WHERE PaymentStatus = 'Unpaid'")).ToString("N2");
-            litUninvoiced.Text = Db.ToStr(Db.Scalar(
-                @"SELECT COUNT(*) FROM dbo.[Shipment] s
-                  WHERE s.DeliveryStatus = 'Delivered'
-                    AND NOT EXISTS (SELECT 1 FROM dbo.[Payment] p WHERE p.ShipmentID = s.ShipmentID)"));
+            // Same definitions as the Revenue report: cancelled invoices excluded, outstanding
+            // includes every unpaid status, overdue by due date.
+            ChartAssets.Register(this);
+            DateTime now = DateTime.Now;
+            litSummary.Text = RoleDashboards.Render(() => RoleDashboards.Finance(now, ResolveUrl), RoleDashboards.CacheKey("finance", now, null));
 
             DataTable dt = Db.Query(
                 @"SELECT TOP 15 p.InvoiceNumber, p.Amount, p.PaymentStatus, p.IssuedDate,

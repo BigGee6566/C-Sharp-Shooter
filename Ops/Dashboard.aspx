@@ -39,6 +39,10 @@
             </a>
         </div>
 
+        <div class="lc-dashboard mb-8">
+            <asp:Literal ID="litSummary" runat="server" EnableViewState="false" />
+        </div>
+
         <div class="fcl-card rounded-xl p-6 overflow-x-auto">
             <h2 class="font-bold text-lg text-brandDark mb-4">Recent Shipments</h2>
             <asp:Repeater ID="rptRecent" runat="server">

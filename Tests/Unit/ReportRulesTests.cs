@@ -115,5 +115,22 @@ namespace ForteLogisticsApp.Tests.Unit
             StringAssert.Contains(ReportHtml.DetailTable(new[] { "A" }, new List<string[]>(), "Test", "Nothing <here>", false, 10),
                 "Nothing &lt;here&gt;", "the empty text is encoded");
         }
+
+        [TestMethod]
+        public void A_failing_dashboard_panel_shows_a_notice_instead_of_breaking_the_page()
+        {
+            string html = RoleDashboards.Render(() => { throw new InvalidOperationException("database down"); }, null);
+            StringAssert.Contains(html, "unavailable right now");
+            Assert.IsFalse(html.Contains("database down"), "no internals reach the page");
+        }
+
+        [TestMethod]
+        public void Company_dashboard_panels_are_cached_briefly()
+        {
+            string key = RoleDashboards.CacheKey("test-" + Guid.NewGuid().ToString("N"), Today, null);
+            Assert.AreEqual("first", RoleDashboards.Render(() => "first", key));
+            Assert.AreEqual("first", RoleDashboards.Render(() => "second", key), "served from the cache");
+            Assert.AreEqual("second", RoleDashboards.Render(() => "second", null), "per-user panels are never cached");
+        }
     }
 }

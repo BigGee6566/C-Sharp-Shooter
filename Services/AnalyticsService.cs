@@ -143,7 +143,10 @@ namespace ForteLogisticsApp.Services
         public int Users;
         public int Customers;
         public int Staff;
+        public int Admins;
         public int Drivers;
+        /// <summary>Drivers whose account has the Staff role - the drivers counted inside <see cref="Staff"/>.</summary>
+        public int StaffDrivers;
         public int DriversAvailable;
         public int DriversOnRoute;
     }
@@ -600,6 +603,8 @@ namespace ForteLogisticsApp.Services
                 @"SELECT (SELECT COUNT(*) FROM dbo.[User]) AS Users,
                          (SELECT COUNT(*) FROM dbo.[User] WHERE Role = 'Customer') AS Customers,
                          (SELECT COUNT(*) FROM dbo.[User] WHERE Role = 'Staff') AS Staff,
+                         (SELECT COUNT(*) FROM dbo.[User] WHERE Role = 'Admin') AS Admins,
+                         (SELECT COUNT(*) FROM dbo.[Driver] d JOIN dbo.[User] u ON u.UserID = d.UserID WHERE u.Role = 'Staff') AS StaffDrivers,
                          (SELECT COUNT(*) FROM dbo.[Driver]) AS Drivers,
                          (SELECT COUNT(*) FROM dbo.[Driver] WHERE AvailabilityStatus = 'Available') AS Available,
                          (SELECT COUNT(*) FROM dbo.[Driver] WHERE AvailabilityStatus = 'On Route') AS OnRoute");
@@ -609,6 +614,8 @@ namespace ForteLogisticsApp.Services
             c.Users = Db.ToInt(r["Users"]);
             c.Customers = Db.ToInt(r["Customers"]);
             c.Staff = Db.ToInt(r["Staff"]);
+            c.Admins = Db.ToInt(r["Admins"]);
+            c.StaffDrivers = Db.ToInt(r["StaffDrivers"]);
             c.Drivers = Db.ToInt(r["Drivers"]);
             c.DriversAvailable = Db.ToInt(r["Available"]);
             c.DriversOnRoute = Db.ToInt(r["OnRoute"]);
