@@ -171,5 +171,12 @@ namespace ForteLogisticsApp.Tests.Unit
             Assert.IsFalse(RequestThrottle.Allow(key, 3, TimeSpan.FromMinutes(10)), "the fourth is refused");
             Assert.IsTrue(RequestThrottle.Allow(key + "-other", 3, TimeSpan.FromMinutes(10)), "other callers are unaffected");
         }
+
+        [TestMethod]
+        public void Messages_keep_their_line_breaks_but_lose_invisible_characters()
+        {
+            string typed = "  Hello" + (char)0x200B + "\r\nSecond line\tend  ";
+            Assert.AreEqual("Hello\r\nSecond line\tend", InputValidator.NormalizeMultiline(typed));
+        }
     }
 }

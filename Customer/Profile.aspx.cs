@@ -36,16 +36,33 @@ namespace ForteLogisticsApp.CustomerPortal
 
         protected void btnSave_Click(object sender, EventArgs e)
         {
-            string name = txtFullName.Text.Trim();
+            string name = InputValidator.NormalizeText(txtFullName.Text);
+            string phone = InputValidator.NormalizePhone(txtPhone.Text);
+            string address = InputValidator.NormalizeText(txtAddress.Text);
             if (name.Length == 0)
             {
                 Set(lblSaveMsg, "Full name is required.", false);
                 return;
             }
+            if (name.Length > AccountService.NameMax)
+            {
+                Set(lblSaveMsg, "Please shorten your name to " + AccountService.NameMax + " characters.", false);
+                return;
+            }
+            if (phone.Length > 0 && !InputValidator.IsValidPhone(phone))
+            {
+                Set(lblSaveMsg, "Please enter a phone number with 7 to 15 digits, or leave it blank.", false);
+                return;
+            }
+            if (address.Length > AccountService.AddressMax)
+            {
+                Set(lblSaveMsg, "Please shorten your address to " + AccountService.AddressMax + " characters.", false);
+                return;
+            }
 
             Db.NonQuery(
                 @"UPDATE dbo.[User] SET FullName = @n, PhoneNumber = @p, Address = @a WHERE UserID = @u",
-                "@n", name, "@p", txtPhone.Text.Trim(), "@a", txtAddress.Text.Trim(), "@u", UserId);
+                "@n", name, "@p", phone, "@a", address, "@u", UserId);
 
             Session["FullName"] = name; // keep the header greeting in sync
             Set(lblSaveMsg, "Your details have been updated.", true);
@@ -56,9 +73,10 @@ namespace ForteLogisticsApp.CustomerPortal
             string current = txtCurrent.Text;
             string newPw = txtNew.Text;
 
-            if (newPw.Length < 6)
+            if (newPw.Length < AccountService.MinPasswordLength || newPw.Length > AccountService.MaxPasswordLength)
             {
-                Set(lblPwMsg, "New password must be at least 6 characters.", false);
+                Set(lblPwMsg, "Your new password must be " + AccountService.MinPasswordLength + " to " +
+                              AccountService.MaxPasswordLength + " characters.", false);
                 return;
             }
             if (newPw != txtConfirm.Text)
@@ -67,12 +85,21 @@ namespace ForteLogisticsApp.CustomerPortal
                 return;
             }
 
+            // Guessing the current password from a hijacked session is limited like sign-in.
+            string guessKey = "pwchange:" + UserId;
+            if (RequestThrottle.Count(guessKey) >= 5)
+            {
+                Set(lblPwMsg, "Too many incorrect attempts. Please wait 15 minutes and try again.", false);
+                return;
+            }
             string storedHash = Db.ToStr(Db.Scalar("SELECT Password FROM dbo.[User] WHERE UserID = @u", "@u", UserId));
             if (!PasswordHelper.Verify(current, storedHash))
             {
+                RequestThrottle.Allow(guessKey, 5, TimeSpan.FromMinutes(15));
                 Set(lblPwMsg, "Your current password is incorrect.", false);
                 return;
             }
+            RequestThrottle.Reset(guessKey);
 
             string newHash = PasswordHelper.Hash(newPw);
             Db.NonQuery("UPDATE dbo.[User] SET Password = @p WHERE UserID = @u",

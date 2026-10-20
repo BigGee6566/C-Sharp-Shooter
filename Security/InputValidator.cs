@@ -48,6 +48,21 @@ namespace ForteLogisticsApp.Security
             return result;
         }
 
+        /// <summary>
+        /// For free-form messages: keeps line breaks and tabs, drops other invisible characters,
+        /// trims the ends. Never returns null. Does not cut - callers refuse what is too long.
+        /// </summary>
+        public static string NormalizeMultiline(string value)
+        {
+            if (string.IsNullOrEmpty(value)) return string.Empty;
+            var sb = new StringBuilder(value.Length);
+            foreach (char c in value)
+            {
+                if (c == '\n' || c == '\r' || c == '\t' || !IsInvisible(c)) sb.Append(c);
+            }
+            return sb.ToString().Trim();
+        }
+
         private static bool IsInvisible(char c)
         {
             UnicodeCategory cat = char.GetUnicodeCategory(c);
