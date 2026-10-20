@@ -15,7 +15,7 @@ namespace ForteLogisticsApp.Ops
         protected Label lblStatus, lblSenderMatch;
         protected Panel pnlLabel, pnlNoLabel;
         protected Literal litWaybill, litRoute, litBarcodeVal;
-        protected HiddenField hfSenderId;
+        protected HiddenField hfSenderId, hfSubmitToken;
 
         protected void Page_Load(object sender, EventArgs e)
         {
@@ -24,9 +24,10 @@ namespace ForteLogisticsApp.Ops
 
             SortingService.BindCities(ddlOrigin);
             SortingService.BindCities(ddlDest, "Cape Town");
+            hfSubmitToken.Value = IssueSubmitToken(TokenScope);
         }
 
-        private decimal Weight { get { return CourierService.ParseWeight(txtWeight.Text); } }
+        private const string TokenScope = "ParcelRegistration";
 
         /// <summary>
         /// Matches a walk-in sender to an existing customer account by email or phone.
@@ -45,14 +46,25 @@ namespace ForteLogisticsApp.Ops
                 return;
             }
 
+            // Match on the canonical forms, and never guess: two customers sharing a phone
+            // number would otherwise put this parcel (and its recipient's details) on the
+            // wrong account.
+            string phone = InputValidator.NormalizePhone(query);
             DataTable dt = Db.Query(
-                @"SELECT TOP 1 UserID, FullName FROM dbo.[User]
-                  WHERE Role = 'Customer' AND (Email = @q OR PhoneNumber = @q)", "@q", query);
+                @"SELECT TOP 2 UserID, FullName FROM dbo.[User]
+                  WHERE Role = 'Customer' AND (Email = @e OR (@p <> '' AND PhoneNumber = @p))",
+                "@e", InputValidator.NormalizeEmail(query), "@p", InputValidator.IsValidPhone(phone) ? phone : string.Empty);
 
             if (dt.Rows.Count == 0)
             {
                 lblSenderMatch.CssClass = UiHelper.AlertClass("warning") + " mt-1";
                 lblSenderMatch.Text = "No account found &mdash; registering as a walk-in.";
+                return;
+            }
+            if (dt.Rows.Count > 1)
+            {
+                lblSenderMatch.CssClass = UiHelper.AlertClass("warning") + " mt-1";
+                lblSenderMatch.Text = "More than one customer matches &mdash; search by their email address instead.";
                 return;
             }
 
@@ -68,47 +80,104 @@ namespace ForteLogisticsApp.Ops
         {
             if (!Page.IsValid) return;
 
-            if (txtSender.Text.Trim().Length == 0 || txtReceiver.Text.Trim().Length == 0 ||
-                txtDelivery.Text.Trim().Length == 0)
+            decimal weight;
+            if (!InputValidator.TryParseWeight(txtWeight.Text, out weight, IntakeService.MaxWeightKg))
             {
-                lblStatus.CssClass = UiHelper.AlertClass("error");
-                lblStatus.Text = "Please complete the sender, recipient and delivery address.";
+                // Never fall back to a default: a wrong weight means a wrong price on the invoice.
+                ShowError("Please enter the parcel weight in kg (above 0 and up to " + IntakeService.MaxWeightKg.ToString("0") + ").");
+                return;
+            }
+            if (InputValidator.NormalizeText(txtSender.Text).Length == 0)
+            {
+                ShowError("Please enter the sender's name.");
                 return;
             }
 
-            string tracking = CourierService.GenerateTrackingNumber();
-            decimal cost = CourierService.CalculateQuote(ddlOrigin.SelectedValue, ddlDest.SelectedValue, Weight);
-            object senderId = int.TryParse(hfSenderId.Value, out int sid) ? (object)sid : DBNull.Value;
-
-            int shipId = Db.Insert(
-                @"INSERT INTO dbo.[Shipment]
-                    (TrackingNumber, Barcode, SenderID, ReceiverName, PickupAddress, DeliveryAddress,
-                     OriginCity, DestCity, ParcelWeight, ParcelDescription, Cost,
-                     DeliveryStatus, WarehouseStatus, LastStatusChange)
-                  VALUES (@t, @t, @sid, @rn, @pu, @da, @o, @d, @w, @desc, @c, 'Registered', 'Received', GETDATE())",
-                "@t", tracking, "@sid", senderId, "@rn", txtReceiver.Text.Trim(),
-                "@pu", txtPickup.Text.Trim(), "@da", txtDelivery.Text.Trim(),
-                "@o", ddlOrigin.SelectedValue, "@d", ddlDest.SelectedValue,
-                "@w", Weight, "@desc", txtDescription.Text.Trim(), "@c", cost);
-
-            // A matched customer now gets the same notifications as an online booking.
-            if (senderId != DBNull.Value)
+            // A matched sender must still be a customer now - the hidden field is client data.
+            // If not, stop rather than quietly registering a walk-in the customer never sees.
+            int? senderId = null;
+            int sid;
+            if (int.TryParse(hfSenderId.Value, out sid))
             {
-                NotificationService.Send((int)senderId, shipId,
-                    "Your parcel has been registered at our counter. Waybill " + tracking + ".", "Registration");
+                if (Db.ToInt(Db.Scalar("SELECT COUNT(*) FROM dbo.[User] WHERE UserID = @u AND Role = 'Customer'", "@u", sid)) != 1)
+                {
+                    hfSenderId.Value = string.Empty;
+                    lblSenderMatch.Text = string.Empty;
+                    ShowError("The matched customer account is no longer available. Look the sender up again, or clear the search to register a walk-in.");
+                    return;
+                }
+                senderId = sid;
             }
 
-            Db.NonQuery(
-                @"INSERT INTO dbo.[TrackingHistory] (ShipmentID, AdminID, Location, Status, Remarks)
-                  VALUES (@s, @a, @loc, 'Registered', 'Parcel registered at intake counter')",
-                "@s", shipId, "@a", UserId, "@loc", ddlOrigin.SelectedValue + " Depot");
+            var draft = new ShipmentDraft
+            {
+                SenderId = senderId,
+                ReceiverName = txtReceiver.Text,
+                PickupAddress = txtPickup.Text,
+                DeliveryAddress = txtDelivery.Text,
+                OriginCity = ddlOrigin.SelectedValue,
+                DestCity = ddlDest.SelectedValue,
+                WeightKg = weight,
+                Description = txtDescription.Text,
+                Cost = CourierService.CalculateQuote(ddlOrigin.SelectedValue, ddlDest.SelectedValue, weight),
+                WarehouseStatus = "Received",
+                PaymentGateStatus = "NotRequired",
+                RegisteredByStaffId = UserId,
+                TrackingLocation = ddlOrigin.SelectedValue + " Depot",
+                // There is no sender-name column; keep who handed it in on the record.
+                TrackingRemark = "Parcel registered at intake counter (sender: " + InputValidator.NormalizeText(txtSender.Text, 150) + ")"
+            };
+            IntakeService.Normalize(draft);
+            string problem = IntakeService.Validate(draft);
+            if (problem != null)
+            {
+                ShowError(problem);
+                return;
+            }
+
+            // Consumed only once the details are good, so a correctable mistake keeps it live.
+            if (!ConsumeSubmitToken(TokenScope, hfSubmitToken.Value))
+            {
+                lblStatus.CssClass = UiHelper.AlertClass("info");
+                lblStatus.Text = "That parcel has already been registered. Check the list before registering it again.";
+                return;
+            }
+
+            CreatedShipment created;
+            try
+            {
+                created = IntakeService.Create(draft);
+            }
+            catch (ValidationFailedException ex)
+            {
+                hfSubmitToken.Value = IssueSubmitToken(TokenScope);
+                ShowError(ex.Message);
+                return;
+            }
+            catch (Exception ex)
+            {
+                // Rolled back: nothing was registered. A fresh token lets the clerk retry safely.
+                System.Diagnostics.Trace.TraceError("Counter registration failed for staff " + UserId + ": " + ex);
+                hfSubmitToken.Value = IssueSubmitToken(TokenScope);
+                ShowError("Nothing was registered - something went wrong on our side. Please try again.");
+                return;
+            }
+            string tracking = created.TrackingNumber;
+            hfSubmitToken.Value = IssueSubmitToken(TokenScope);   // ready for the next parcel
+
+            // A matched customer now gets the same notifications as an online booking.
+            if (senderId != null)
+            {
+                NotificationService.TrySend(senderId.Value, created.ShipmentId,
+                    "Your parcel has been registered at our counter. Waybill " + tracking + ".", "Registration");
+            }
 
             pnlLabel.Visible = true;
             pnlNoLabel.Visible = false;
             litWaybill.Text = tracking;
             // Rendered inside a JavaScript string literal on the page.
             litBarcodeVal.Text = UiHelper.JsEnc(tracking);
-            litRoute.Text = ddlOrigin.SelectedValue + " &rarr; " + ddlDest.SelectedValue + " &middot; " + Weight.ToString("0.##") + " kg";
+            litRoute.Text = ddlOrigin.SelectedValue + " &rarr; " + ddlDest.SelectedValue + " &middot; " + weight.ToString("0.##") + " kg";
 
             lblStatus.CssClass = UiHelper.AlertClass("success");
             lblStatus.Text = "Parcel " + tracking + " registered successfully.";
@@ -119,6 +188,12 @@ namespace ForteLogisticsApp.Ops
             txtWeight.Text = "1";
             hfSenderId.Value = string.Empty;
             lblSenderMatch.Text = string.Empty;
+        }
+
+        private void ShowError(string message)
+        {
+            lblStatus.CssClass = UiHelper.AlertClass("error");
+            lblStatus.Text = UiHelper.Enc(message);
         }
     }
 }

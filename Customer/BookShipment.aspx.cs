@@ -174,13 +174,24 @@ namespace ForteLogisticsApp.CustomerPortal
                 lblAddrStatus.Text = "Please enter both the collection and delivery city.";
                 return;
             }
+            // The address rules the booking will face, reported here where the fields are
+            // (the recipient comes on the next step).
+            ShipmentDraft check = BuildDraft(false);
+            IntakeService.Normalize(check);
+            string problem = IntakeService.ValidateAddresses(check);
+            if (problem != null)
+            {
+                lblAddrStatus.CssClass = UiHelper.AlertClass("error") + " block mb-3";
+                lblAddrStatus.Text = UiHelper.Enc(problem);
+                return;
+            }
             lblAddrStatus.Text = string.Empty;
             lblAddrStatus.CssClass = "block mb-3";
 
             lblSummarySize.Text = SelectedSize.Name + " (" + SelectedSize.MaxWeightText.ToLowerInvariant() +
                                   ", " + SelectedSize.DimensionsText + ")";
-            lblSummaryPickup.Text = pickupCity;
-            lblSummaryDelivery.Text = deliveryCity;
+            lblSummaryPickup.Text = UiHelper.Enc(check.OriginCity);
+            lblSummaryDelivery.Text = UiHelper.Enc(check.DestCity);
             lblSummaryTotal.Text = "R " + Quote.ToString("N2");
 
             // Entering the confirm step: mint a one-time token so the Confirm POST can be
@@ -226,12 +237,7 @@ namespace ForteLogisticsApp.CustomerPortal
                 return;
             }
 
-            string trackingNumber = CourierService.GenerateTrackingNumber();
             decimal cost = Quote;
-
-            string pickupAddress = Join(txtPickupStreet.Text, pickupCity, txtPickupPostal.Text);
-            string deliveryAddress = Join(txtDeliveryStreet.Text, deliveryCity, txtDeliveryPostal.Text);
-
             ParcelSize size = SelectedSize;
 
             // Individual clients must pay before their parcel is dispatchable; Business
@@ -241,47 +247,39 @@ namespace ForteLogisticsApp.CustomerPortal
             string clientType = Db.ToStr(Db.Scalar(
                 "SELECT ClientType FROM dbo.[Client] WHERE UserID = @u", "@u", UserId));
             bool paymentRequired = !string.Equals(clientType, "Business", StringComparison.OrdinalIgnoreCase);
-            string paymentGateStatus = paymentRequired ? "PaymentRequired" : "NotRequired";
 
-            int shipmentId = Db.Insert(
-                @"INSERT INTO dbo.[Shipment]
-                    (TrackingNumber, Barcode, SenderID, ReceiverName, ReceiverPhone,
-                     PickupAddress, DeliveryAddress, OriginCity, DestCity, ParcelWeight,
-                     ParcelLengthCm, ParcelWidthCm, ParcelHeightCm,
-                     ParcelDescription, Cost, DeliveryStatus, WarehouseStatus, PaymentGateStatus, LastStatusChange)
-                  VALUES (@t, @t, @s, @rn, @rp, @pu, @da, @o, @d, @w,
-                          @len, @wid, @hgt, @desc, @c,
-                          'Registered', 'Pending', @pgs, GETDATE())",
-                "@t", trackingNumber,
-                "@s", UserId,
-                "@rn", txtReceiver.Text.Trim(),
-                "@rp", txtReceiverPhone.Text.Trim(),
-                "@pu", pickupAddress,
-                "@da", deliveryAddress,
-                "@o", pickupCity,
-                "@d", deliveryCity,
-                "@w", size.MaxWeightKg,
-                "@len", size.LengthCm,
-                "@wid", size.WidthCm,
-                "@hgt", size.HeightCm,
-                "@desc", txtDescription.Text.Trim(),
-                "@c", cost,
-                "@pgs", paymentGateStatus);
+            // Shipment, first tracking event and invoice are created in one transaction.
+            CreatedShipment created;
+            try
+            {
+                created = IntakeService.Create(BuildDraft(paymentRequired));
+            }
+            catch (ValidationFailedException ex)
+            {
+                // Nothing was saved: give the customer a live token to correct and resubmit.
+                hfSubmitToken.Value = IssueSubmitToken("BookShipment");
+                lblStatus.CssClass = UiHelper.AlertClass("error") + " mt-4";
+                lblStatus.Text = UiHelper.Enc(ex.Message);
+                return;
+            }
+            catch (Exception ex)
+            {
+                // The transaction rolled back, so nothing was booked; say so, and let them retry
+                // (the spent token would otherwise claim the booking had gone through).
+                System.Diagnostics.Trace.TraceError("Booking failed for user " + UserId + ": " + ex);
+                hfSubmitToken.Value = IssueSubmitToken("BookShipment");
+                lblStatus.CssClass = UiHelper.AlertClass("error") + " mt-4";
+                lblStatus.Text = "Nothing was booked - something went wrong on our side. Please try again in a moment.";
+                return;
+            }
 
-            Db.NonQuery(
-                @"INSERT INTO dbo.[TrackingHistory] (ShipmentID, Location, Status, Remarks)
-                  VALUES (@s, @loc, 'Registered', 'Collection booked online by customer')",
-                "@s", shipmentId, "@loc", pickupCity + " (Booking)");
-
-            string invoiceNumber = CourierService.GenerateInvoiceNumber();
-            Db.NonQuery(
-                @"INSERT INTO dbo.[Payment] (ClientID, ShipmentID, InvoiceNumber, Amount, PaymentStatus)
-                  VALUES (@c, @s, @inv, @a, 'Unpaid')",
-                "@c", UserId, "@s", shipmentId, "@inv", invoiceNumber, "@a", cost);
+            string trackingNumber = created.TrackingNumber;
+            int shipmentId = created.ShipmentId;
+            string invoiceNumber = created.InvoiceNumber;
 
             if (paymentRequired)
             {
-                NotificationService.Send(UserId, shipmentId,
+                NotificationService.TrySend(UserId, shipmentId,
                     "Your collection has been booked. Waybill " + trackingNumber + ". Pay invoice " +
                     invoiceNumber + " (R " + cost.ToString("F2") + ") now to confirm dispatch.",
                     "Registration");
@@ -292,7 +290,7 @@ namespace ForteLogisticsApp.CustomerPortal
                 return;
             }
 
-            NotificationService.Send(UserId, shipmentId,
+            NotificationService.TrySend(UserId, shipmentId,
                 "Your collection has been booked. Waybill " + trackingNumber + ". Invoice " +
                 invoiceNumber + " for R " + cost.ToString("F2") + " is ready to pay in My Invoices.",
                 "Registration");
@@ -305,16 +303,16 @@ namespace ForteLogisticsApp.CustomerPortal
             lblWaybillSize.Text = size.Name + " (" + size.MaxWeightText.ToLowerInvariant() + ")";
             lblWaybillDimensions.Text = size.DimensionsText;
             lblWaybillAmount.Text = "R " + cost.ToString("N2");
-            lblWaybillSenderName.Text = FullName;
-            lblWaybillReceiverName.Text = txtReceiver.Text.Trim();
+            lblWaybillSenderName.Text = UiHelper.Enc(FullName);
+            lblWaybillReceiverName.Text = UiHelper.Enc(txtReceiver.Text.Trim());
 
-            lblWaybillPickupStreet.Text = txtPickupStreet.Text.Trim();
-            lblWaybillPickupCity.Text = pickupCity;
-            lblWaybillPickupPostal.Text = txtPickupPostal.Text.Trim();
+            lblWaybillPickupStreet.Text = UiHelper.Enc(txtPickupStreet.Text.Trim());
+            lblWaybillPickupCity.Text = UiHelper.Enc(pickupCity);
+            lblWaybillPickupPostal.Text = UiHelper.Enc(txtPickupPostal.Text.Trim());
 
-            lblWaybillDeliveryStreet.Text = txtDeliveryStreet.Text.Trim();
-            lblWaybillDeliveryCity.Text = deliveryCity;
-            lblWaybillDeliveryPostal.Text = txtDeliveryPostal.Text.Trim();
+            lblWaybillDeliveryStreet.Text = UiHelper.Enc(txtDeliveryStreet.Text.Trim());
+            lblWaybillDeliveryCity.Text = UiHelper.Enc(deliveryCity);
+            lblWaybillDeliveryPostal.Text = UiHelper.Enc(txtDeliveryPostal.Text.Trim());
 
             // JsBarcode (loaded by the master) renders the waybill locally, so the number
             // is never sent to a third-party barcode service.
@@ -325,6 +323,38 @@ namespace ForteLogisticsApp.CustomerPortal
 
             mvBookShipment.SetActiveView(vwConfirmation);
             UpdateWizardIndicators(4);
+        }
+
+        /// <summary>
+        /// The booking as the form describes it, priced server-side. Used both to check the
+        /// address step and to create the shipment, so the two can never disagree.
+        /// </summary>
+        private ShipmentDraft BuildDraft(bool paymentRequired)
+        {
+            string pickupCity = txtPickupCity.Text.Trim();
+            string deliveryCity = txtDeliveryCity.Text.Trim();
+            ParcelSize size = SelectedSize;
+            return new ShipmentDraft
+            {
+                SenderId = UserId,
+                ReceiverName = txtReceiver.Text,
+                ReceiverPhone = txtReceiverPhone.Text,
+                PickupAddress = Join(txtPickupStreet.Text, pickupCity, txtPickupPostal.Text),
+                DeliveryAddress = Join(txtDeliveryStreet.Text, deliveryCity, txtDeliveryPostal.Text),
+                OriginCity = pickupCity,
+                DestCity = deliveryCity,
+                WeightKg = size.MaxWeightKg,
+                LengthCm = size.LengthCm,
+                WidthCm = size.WidthCm,
+                HeightCm = size.HeightCm,
+                Description = txtDescription.Text,
+                Cost = Quote,
+                WarehouseStatus = "Pending",
+                PaymentGateStatus = paymentRequired ? "PaymentRequired" : "NotRequired",
+                TrackingLocation = pickupCity + " (Booking)",
+                TrackingRemark = "Collection booked online by customer",
+                CreateInvoice = true
+            };
         }
 
         /// <summary>

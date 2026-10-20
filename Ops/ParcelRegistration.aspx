@@ -19,6 +19,8 @@
                             OnClick="btnLookupSender_Click" CssClass="fcl-btn fcl-btn-dark" />
                     </div>
                     <asp:HiddenField ID="hfSenderId" runat="server" />
+                    <%-- One-time token: a double-click or refresh cannot register the same parcel twice. --%>
+                    <asp:HiddenField ID="hfSubmitToken" runat="server" />
                     <asp:Label ID="lblSenderMatch" runat="server" CssClass="block text-xs mt-1"></asp:Label>
                 </div>
 

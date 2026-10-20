@@ -55,6 +55,7 @@
     <Reference Include="System.Web.Extensions" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Drawing" />
+    <Reference Include="System.Runtime.Caching" />
     <Reference Include="System.Web" />
     <Reference Include="System.Xml" />
     <Reference Include="System.Configuration" />
@@ -162,6 +163,7 @@
     <Compile Include="Security\StateMachine.cs" />
     <Compile Include="Security\SubmitGuard.cs" />
     <Compile Include="Security\TrackAccess.cs" />
+    <Compile Include="Security\RequestThrottle.cs" />
     <Compile Include="Security\InputValidator.cs" />
     <Compile Include="Data\Owned.cs" />
     <Compile Include="Services\ReportExport.cs" />
@@ -174,6 +176,8 @@
     <Compile Include="Services\Comparison.cs" />
     <Compile Include="Services\ReportRules.cs" />
     <Compile Include="Services\RoleDashboards.cs" />
+    <Compile Include="Services\IntakeService.cs" />
+    <Compile Include="Services\AccountService.cs" />
     <Compile Include="Reports\PeriodReportPage.cs" />
     <Compile Include="Reports\Comparison.aspx.cs">
       <DependentUpon>Reports\Comparison.aspx</DependentUpon>

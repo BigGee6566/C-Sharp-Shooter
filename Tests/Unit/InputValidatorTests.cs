@@ -42,7 +42,7 @@ namespace ForteLogisticsApp.Tests.Unit
         [DataRow("two@@at.com", false)]
         [DataRow("@nodomain.com", false)]
         [DataRow("trailing@", false)]
-        [DataRow("space in@domain.com", true)]      // local part may contain a space pre-@, domain is clean
+        [DataRow("space in@domain.com", false)]     // no whitespace anywhere in a stored address
         [DataRow("nodot@domaincom", false)]
         [DataRow("has space@do main.com", false)]    // space in the domain is rejected
         public void IsValidEmail_accepts_structurally_sane_addresses(string input, bool expected)

@@ -73,13 +73,26 @@ namespace ForteLogisticsApp.Services
         public static string GenerateInvoiceNumber()
         {
             string seq = "INV-" + DateTime.Now.Year.ToString();
-            object next = Db.Scalar(
-                @"MERGE dbo.NumberSequence WITH (HOLDLOCK) AS t
-                  USING (SELECT @n AS SeqName) AS s ON t.SeqName = s.SeqName
-                  WHEN MATCHED THEN UPDATE SET t.NextValue = t.NextValue + 1
-                  WHEN NOT MATCHED THEN INSERT (SeqName, NextValue) VALUES (@n, 1)
-                  OUTPUT inserted.NextValue;", "@n", seq);
+            object next = Db.Scalar(ClaimSql, "@n", seq);
             return seq + Db.ToInt(next, 1).ToString("D4");
         }
+
+        /// <summary>
+        /// As <see cref="GenerateInvoiceNumber()"/>, inside the caller's transaction: if the
+        /// invoice is rolled back, so is the number, so the sequence has no gaps.
+        /// </summary>
+        public static string GenerateInvoiceNumber(System.Data.SqlClient.SqlConnection conn, System.Data.SqlClient.SqlTransaction tx)
+        {
+            string seq = "INV-" + DateTime.Now.Year.ToString();
+            object next = Db.Scalar(conn, tx, ClaimSql, "@n", seq);
+            return seq + Db.ToInt(next, 1).ToString("D4");
+        }
+
+        private const string ClaimSql =
+            @"MERGE dbo.NumberSequence WITH (HOLDLOCK) AS t
+              USING (SELECT @n AS SeqName) AS s ON t.SeqName = s.SeqName
+              WHEN MATCHED THEN UPDATE SET t.NextValue = t.NextValue + 1
+              WHEN NOT MATCHED THEN INSERT (SeqName, NextValue) VALUES (@n, 1)
+              OUTPUT inserted.NextValue;";
     }
 }

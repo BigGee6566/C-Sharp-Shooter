@@ -74,7 +74,7 @@
 
                 <div>
                     <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1" for="<%= txtPassword.ClientID %>">Password *</label>
-                    <asp:TextBox ID="txtPassword" runat="server" TextMode="Password" CssClass="fcl-input" placeholder="At least 6 characters" />
+                    <asp:TextBox ID="txtPassword" runat="server" TextMode="Password" CssClass="fcl-input" placeholder="At least 8 characters" />
                     <asp:RequiredFieldValidator ID="rfvPassword" runat="server" ControlToValidate="txtPassword"
                         Display="Dynamic" ValidationGroup="Register" ErrorMessage="Password is required."
                         CssClass="block font-label-sm text-label-sm text-error mt-1" />

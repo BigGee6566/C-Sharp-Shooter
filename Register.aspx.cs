@@ -42,6 +42,14 @@ namespace ForteLogisticsApp
         {
             if (!Page.IsValid) return;
 
+            // Public and unauthenticated: cap attempts per address so a script cannot create
+            // accounts in bulk or probe which emails are registered.
+            if (!RequestThrottle.Allow("register:" + Request.UserHostAddress, 5, TimeSpan.FromMinutes(10)))
+            {
+                SetStatus("error", "Too many sign-up attempts from this network. Please wait a few minutes and try again.");
+                return;
+            }
+
             string fullName = txtFullName.Text.Trim();
             string email = txtEmail.Text.Trim();
             string password = txtPassword.Text;
@@ -58,11 +66,6 @@ namespace ForteLogisticsApp
                 SetStatus("error", "Please complete all required fields (marked *).");
                 return;
             }
-            if (password.Length < 6)
-            {
-                SetStatus("error", "Password must be at least 6 characters long.");
-                return;
-            }
             if (password != txtConfirm.Text)
             {
                 SetStatus("error", "The passwords you entered do not match.");
@@ -74,29 +77,27 @@ namespace ForteLogisticsApp
                 return;
             }
 
-            if (Db.ToInt(Db.Scalar("SELECT COUNT(*) FROM dbo.[User] WHERE Email = @e", "@e", email)) > 0)
+            // User + Client in one transaction; the email check (and its race) lives there too.
+            AccountResult result = AccountService.Create(new NewAccount
             {
-                SetStatus("error", "An account with that email already exists. Please sign in instead.");
+                FullName = fullName,
+                Email = email,
+                Phone = txtPhone.Text,
+                Address = txtAddress.Text,
+                Password = password,
+                Role = "Customer",
+                ClientType = string.Equals(hfRole.Value, "Business", StringComparison.OrdinalIgnoreCase) ? "Business" : "Individual"
+            }, null);
+            if (!result.Success)
+            {
+                SetStatus("error", result.Message == AccountService.EmailTaken
+                    ? "An account with that email already exists. Please sign in instead."
+                    : result.Message);
                 return;
             }
+            int userId = result.UserId;
 
-            int userId = Db.Insert(
-                @"INSERT INTO dbo.[User] (FullName, Email, Password, Role, PhoneNumber, Address)
-                  VALUES (@n, @e, @p, 'Customer', @ph, @a)",
-                "@n", fullName,
-                "@e", email,
-                "@p", PasswordHelper.Hash(password),
-                "@ph", txtPhone.Text.Trim(),
-                "@a", txtAddress.Text.Trim());
-
-            string clientType = string.Equals(hfRole.Value, "Business", StringComparison.OrdinalIgnoreCase)
-                ? "Business"
-                : "Individual";
-
-            Db.NonQuery("INSERT INTO dbo.[Client] (UserID, ClientType) VALUES (@u, @t)",
-                "@u", userId, "@t", clientType);
-
-            NotificationService.Send(userId, null,
+            NotificationService.TrySend(userId, null,
                 "Welcome to Logisticore Courier Service! Your account is ready to use.", "System");
 
             Response.Redirect(ResolveUrl("~/Login.aspx?registered=1"));
