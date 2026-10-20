@@ -421,6 +421,10 @@ namespace ForteLogisticsApp.Ops
                     "@r", routeId, "@d", (object)driverId, "@s", shipId);
                 if (rows != 1) { taken++; continue; }
 
+                // A new driver starts with no shared position (a requeued parcel may still hold
+                // the previous driver's last one).
+                Db.NonQuery("DELETE FROM dbo.LocationPing WHERE ShipmentID = @s AND Role = 'Driver'", "@s", shipId);
+
                 // Record which driver AND vehicle the parcel was assigned to.
                 Db.NonQuery(
                     @"INSERT INTO dbo.[TrackingHistory] (ShipmentID, DriverID, VehicleID, AdminID, Location, Status, Remarks)
