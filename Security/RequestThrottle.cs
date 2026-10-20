@@ -34,5 +34,24 @@ namespace ForteLogisticsApp.Security
                 return count[0] <= limit;
             }
         }
+
+        /// <summary>Attempts recorded for <paramref name="key"/> in its current window (0 when none).</summary>
+        public static int Count(string key)
+        {
+            lock (Gate)
+            {
+                var count = Counters.Get(key ?? "(unknown)") as int[];
+                return count == null ? 0 : count[0];
+            }
+        }
+
+        /// <summary>Forgets <paramref name="key"/>, e.g. after a successful sign-in.</summary>
+        public static void Reset(string key)
+        {
+            lock (Gate)
+            {
+                Counters.Remove(key ?? "(unknown)");
+            }
+        }
     }
 }

@@ -46,23 +46,15 @@ namespace ForteLogisticsApp.AdminPortal
 
         protected void btnAddVehicle_Click(object sender, EventArgs e)
         {
-            if (txtReg.Text.Trim().Length == 0)
-            {
-                lblMsg.CssClass = UiHelper.AlertClass("error") + " mb-4";
-                lblMsg.Text = "Please enter a registration number.";
-                return;
-            }
+            // Validation, the duplicate-plate check and the audit entry live in FleetService.
+            int d;
+            int? driverId = int.TryParse(ddlDriver.SelectedValue, out d) ? (int?)d : null;
+            AccountResult result = FleetService.AddVehicle(txtReg.Text, ddlType.SelectedValue, driverId, UserId);
 
-            object driverId = string.IsNullOrEmpty(ddlDriver.SelectedValue)
-                ? (object)DBNull.Value : int.Parse(ddlDriver.SelectedValue);
+            lblMsg.CssClass = UiHelper.AlertClass(result.Success ? "success" : "error") + " mb-4";
+            lblMsg.Text = result.Success ? "Vehicle added." : UiHelper.Enc(result.Message);
+            if (!result.Success) return;
 
-            Db.NonQuery(
-                @"INSERT INTO dbo.[Vehicle] (DriverID, VehicleType, RegistrationNumber)
-                  VALUES (@d, @t, @r)",
-                "@d", driverId, "@t", ddlType.SelectedValue, "@r", txtReg.Text.Trim());
-
-            lblMsg.CssClass = UiHelper.AlertClass("success") + " mb-4";
-            lblMsg.Text = "Vehicle added.";
             txtReg.Text = string.Empty;
             LoadAll();
         }

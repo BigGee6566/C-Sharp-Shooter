@@ -164,6 +164,7 @@
     <Compile Include="Security\SubmitGuard.cs" />
     <Compile Include="Security\TrackAccess.cs" />
     <Compile Include="Security\RequestThrottle.cs" />
+    <Compile Include="Security\SessionGuard.cs" />
     <Compile Include="Security\InputValidator.cs" />
     <Compile Include="Data\Owned.cs" />
     <Compile Include="Services\ReportExport.cs" />
@@ -178,6 +179,7 @@
     <Compile Include="Services\RoleDashboards.cs" />
     <Compile Include="Services\IntakeService.cs" />
     <Compile Include="Services\AccountService.cs" />
+    <Compile Include="Services\AdminServices.cs" />
     <Compile Include="Reports\PeriodReportPage.cs" />
     <Compile Include="Reports\Comparison.aspx.cs">
       <DependentUpon>Reports\Comparison.aspx</DependentUpon>

@@ -74,8 +74,11 @@ namespace ForteLogisticsApp.CustomerPortal
                 return;
             }
 
+            string newHash = PasswordHelper.Hash(newPw);
             Db.NonQuery("UPDATE dbo.[User] SET Password = @p WHERE UserID = @u",
-                "@p", PasswordHelper.Hash(newPw), "@u", UserId);
+                "@p", newHash, "@u", UserId);
+            // Their own change: keep this session signed in (other sessions are ended).
+            SessionGuard.Restamp(Session, Role, newHash);
 
             txtCurrent.Text = txtNew.Text = txtConfirm.Text = string.Empty;
             Set(lblPwMsg, "Your password has been changed.", true);

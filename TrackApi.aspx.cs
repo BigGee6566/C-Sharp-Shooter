@@ -31,7 +31,7 @@ namespace ForteLogisticsApp
             Response.Cache.SetCacheability(HttpCacheability.NoCache);
 
             int uid = (Session != null && Session["UserID"] != null) ? (int)Session["UserID"] : 0;
-            if (uid <= 0) { Write(new { ok = false, error = "auth" }); return; }
+            if (uid <= 0 || !SessionGuard.IsCurrent(Context)) { Write(new { ok = false, error = "auth" }); return; }
 
             string wb = (Request["wb"] ?? string.Empty).Trim();
             if (wb.Length == 0) { Write(new { ok = false, error = "nowaybill" }); return; }

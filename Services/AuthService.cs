@@ -17,10 +17,19 @@ namespace ForteLogisticsApp.Services
         private const int MaxAttempts = 5;
         private const int LockoutMinutes = 5;
 
+        /// <summary>
+        /// Failed attempts allowed against one ACCOUNT, from any number of sessions, before it is
+        /// made to wait - the per-session limit alone is bypassed by simply dropping the cookie.
+        /// </summary>
+        public const int MaxAccountFailures = 10;
+        public static readonly TimeSpan AccountLockout = TimeSpan.FromMinutes(15);
+
         public static string Login(string email, string password, HttpSessionState session)
         {
             if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password)) return null;
             if (session != null && IsLockedOut(session)) return null;
+            string accountKey = "login:" + InputValidator.NormalizeEmail(email);
+            if (RequestThrottle.Count(accountKey) >= MaxAccountFailures) return null;
 
             DataTable dt = Db.Query(
                 "SELECT UserID, FullName, Role, Password FROM dbo.[User] WHERE Email = @e", "@e", email.Trim());
@@ -28,6 +37,7 @@ namespace ForteLogisticsApp.Services
             if (dt.Rows.Count == 0)
             {
                 RecordFailure(session);
+                RequestThrottle.Allow(accountKey, MaxAccountFailures, AccountLockout);
                 return null;
             }
 
@@ -36,8 +46,10 @@ namespace ForteLogisticsApp.Services
             if (!PasswordHelper.Verify(password, stored))
             {
                 RecordFailure(session);
+                RequestThrottle.Allow(accountKey, MaxAccountFailures, AccountLockout);
                 return null;
             }
+            RequestThrottle.Reset(accountKey);
 
             int userId = Db.ToInt(row["UserID"]);
 
@@ -45,8 +57,9 @@ namespace ForteLogisticsApp.Services
             // have the plaintext at this instant, so this is the one place it can be done.
             if (PasswordHelper.NeedsUpgrade(stored))
             {
+                stored = PasswordHelper.Hash(password);
                 Db.NonQuery("UPDATE dbo.[User] SET Password = @p WHERE UserID = @u",
-                    "@p", PasswordHelper.Hash(password), "@u", userId);
+                    "@p", stored, "@u", userId);
             }
 
             if (session != null)
@@ -62,6 +75,8 @@ namespace ForteLogisticsApp.Services
                 session["UserID"] = userId;
                 session["FullName"] = Db.ToStr(row["FullName"]);
                 session["Role"] = Db.ToStr(row["Role"]);
+                // Ties this session to the role and password it signed in with (SessionGuard).
+                SessionGuard.Restamp(session, Db.ToStr(row["Role"]), stored);
             }
             return Db.ToStr(row["Role"]);
         }
