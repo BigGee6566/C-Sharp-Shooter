@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Web;
 using System.Web.Script.Serialization;
 using ForteLogisticsApp.Data;
+using ForteLogisticsApp.Security;
 using ForteLogisticsApp.Services;
 
 namespace ForteLogisticsApp
@@ -15,11 +16,12 @@ namespace ForteLogisticsApp
     /// POST  wb, role, lat, lng    -> stores a position ping (the sender shares their own
     ///                                location, or the assigned driver shares theirs).
     ///
-    /// Not a security boundary beyond this: it requires a signed-in session, and a ping is
-    /// only accepted for the role the caller actually is on that shipment (the customer may
-    /// only post a Customer ping for a shipment they sent; the driver only a Driver ping for
-    /// one assigned to them). Reads are allowed to any signed-in user, as tracking is already
-    /// available to anyone holding the waybill number.
+    /// It requires a signed-in session. Anyone holding the waybill sees the public view (route,
+    /// status, a simulated driver position); the real GPS positions - the sender's shared
+    /// location and the driver's live position - go only to the parties to the shipment and
+    /// office staff (TrackAccess.CanSeeLivePositions). A ping must come from a page on this
+    /// site (TrackAccess.IsSameOrigin), is only accepted for the role the caller actually holds
+    /// on that shipment, and only while the parcel is still on its way (TrackAccess.CanPing).
     /// </summary>
     public partial class TrackApi : System.Web.UI.Page
     {
@@ -29,7 +31,7 @@ namespace ForteLogisticsApp
             Response.Cache.SetCacheability(HttpCacheability.NoCache);
 
             int uid = (Session != null && Session["UserID"] != null) ? (int)Session["UserID"] : 0;
-            if (uid <= 0) { Write(new { ok = false, error = "auth" }); return; }
+            if (uid <= 0 || !SessionGuard.IsCurrent(Context)) { Write(new { ok = false, error = "auth" }); return; }
 
             string wb = (Request["wb"] ?? string.Empty).Trim();
             if (wb.Length == 0) { Write(new { ok = false, error = "nowaybill" }); return; }
@@ -48,18 +50,26 @@ namespace ForteLogisticsApp
 
             if (string.Equals(Request.HttpMethod, "POST", StringComparison.OrdinalIgnoreCase))
             {
-                HandlePing(shipmentId, senderId, driverId, uid);
+                HandlePing(shipmentId, senderId, driverId, uid, status);
                 return;
             }
+
+            string callerRole = (Session["Role"] as string) ?? string.Empty;
+            bool canSeeLive = TrackAccess.CanSeeLivePositions(uid, callerRole, SecurePage.IsDriver(uid), senderId, driverId);
 
             GeoService.GeoPoint origin = GeoService.ForCity(Db.ToStr(r["OriginCity"]));
             GeoService.GeoPoint dest = GeoService.ForCity(Db.ToStr(r["DestCity"]));
 
-            // Positions shared through the endpoint take priority; otherwise the driver is
-            // simulated from the shipment's status and how long it has been out for delivery.
+            // Shared positions take priority for the parties to the shipment; everyone else (and
+            // anyone when nothing is shared) sees the driver simulated from the shipment's status
+            // and how long it has been out for delivery.
             double? dLat = null, dLng = null, cLat = null, cLng = null;
-            DataTable pings = Db.Query(
-                "SELECT Role, Lat, Lng FROM dbo.LocationPing WHERE ShipmentID = @s", "@s", shipmentId);
+            // Only fresh positions on a parcel still on its way: an old one is no longer "live".
+            bool finished = status == "Delivered" || status == "Failed";
+            DataTable pings = canSeeLive && !finished
+                ? Db.Query("SELECT Role, Lat, Lng FROM dbo.LocationPing WHERE ShipmentID = @s AND UpdatedDate >= DATEADD(minute, -@m, GETDATE())",
+                    "@s", shipmentId, "@m", TrackAccess.FreshPingMinutes)
+                : new DataTable();
             foreach (DataRow p in pings.Rows)
             {
                 string role = Db.ToStr(p["Role"]);
@@ -108,23 +118,33 @@ namespace ForteLogisticsApp
                 ? (DateTime?)Convert.ToDateTime(r[col]) : null;
         }
 
-        private void HandlePing(int shipmentId, int senderId, int driverId, int uid)
+        private void HandlePing(int shipmentId, int senderId, int driverId, int uid, string status)
         {
-            string role = (Request["role"] ?? string.Empty).Trim();
+            // Not an ASP.NET postback, so there is no ViewState to forge-proof it: insist the
+            // request comes from a page on this site.
+            if (!TrackAccess.IsSameOrigin(Request.Headers["Origin"], Request.Headers["Referer"], Request.Headers["Sec-Fetch-Site"], Request.Url))
+            {
+                Write(new { ok = false, error = "forbidden" });
+                return;
+            }
+
+            // Posted fields only - Request[...] would also read the query string and cookies.
+            string role = (Request.Form["role"] ?? string.Empty).Trim();
             double lat, lng;
-            if (!double.TryParse(Request["lat"], NumberStyles.Float, CultureInfo.InvariantCulture, out lat) ||
-                !double.TryParse(Request["lng"], NumberStyles.Float, CultureInfo.InvariantCulture, out lng) ||
+            if (!double.TryParse(Request.Form["lat"], NumberStyles.Float, CultureInfo.InvariantCulture, out lat) ||
+                !double.TryParse(Request.Form["lng"], NumberStyles.Float, CultureInfo.InvariantCulture, out lng) ||
+                double.IsNaN(lat) || double.IsNaN(lng) ||
                 lat < -90 || lat > 90 || lng < -180 || lng > 180)
             {
                 Write(new { ok = false, error = "badcoords" });
                 return;
             }
 
-            bool allowed = (role == "Customer" && senderId == uid) || (role == "Driver" && driverId == uid);
-            if (!allowed) { Write(new { ok = false, error = "forbidden" }); return; }
+            if (!TrackAccess.CanPing(role, uid, senderId, driverId, status)) { Write(new { ok = false, error = "forbidden" }); return; }
 
             Db.NonQuery(
-                @"MERGE dbo.LocationPing AS t
+                // HOLDLOCK: two first pings at once must not both take the INSERT branch.
+                @"MERGE dbo.LocationPing WITH (HOLDLOCK) AS t
                   USING (SELECT @s AS ShipmentID, @r AS Role) AS s
                     ON t.ShipmentID = s.ShipmentID AND t.Role = s.Role
                   WHEN MATCHED THEN UPDATE SET Lat = @lat, Lng = @lng, UpdatedDate = GETDATE()

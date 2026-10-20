@@ -68,6 +68,17 @@ namespace ForteLogisticsApp.Services
                       VALUES (@u, 'Shipment.Transition', 'Shipment', @e, @d)",
                     "@u", actorUserId, "@e", shipmentId.ToString(),
                     "@d", from + " -> " + newStatus + (string.IsNullOrEmpty(remark) ? string.Empty : " (" + remark + ")"));
+
+                // Live positions are personal data with a purpose: once the parcel is no longer
+                // with a driver the driver's position goes, and once it is finished, all of them.
+                if (newStatus == "Delivered" || newStatus == "Failed")
+                {
+                    Db.NonQuery(conn, tx, "DELETE FROM dbo.LocationPing WHERE ShipmentID = @s", "@s", shipmentId);
+                }
+                else if (newStatus != "Assigned" && newStatus != "OutForDelivery")
+                {
+                    Db.NonQuery(conn, tx, "DELETE FROM dbo.LocationPing WHERE ShipmentID = @s AND Role = 'Driver'", "@s", shipmentId);
+                }
             });
         }
 

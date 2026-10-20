@@ -120,7 +120,9 @@ namespace ForteLogisticsApp.Security
         /// <summary>Redirects to Login if not authenticated or not in one of the allowed roles.</summary>
         protected void RequireRole(params string[] allowedRoles)
         {
-            if (!IsLoggedIn)
+            // A session whose role or password changed since sign-in (or whose account is gone)
+            // is ended here, so a demotion or password reset takes effect on the next click.
+            if (!IsLoggedIn || !SessionGuard.IsCurrent(Context))
             {
                 Response.Redirect("~/Login.aspx?returnUrl=" + Server.UrlEncode(Request.RawUrl));
                 return;

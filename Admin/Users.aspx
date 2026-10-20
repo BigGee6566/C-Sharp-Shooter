@@ -54,7 +54,7 @@
                 </div>
                 <div class="md:col-span-2">
                     <label class="block text-xs font-bold text-on-surface uppercase mb-1">Reset Password (leave blank to keep unchanged)</label>
-                    <asp:TextBox ID="txtEResetPw" runat="server" CssClass="fcl-input"></asp:TextBox>
+                    <asp:TextBox ID="txtEResetPw" runat="server" CssClass="fcl-input" TextMode="Password" autocomplete="new-password"></asp:TextBox>
                 </div>
             </div>
             <asp:HiddenField ID="hfEditId" runat="server" />
@@ -101,7 +101,7 @@
                         <p class="text-xs text-on-surface-variant mt-1">Leave blank and the system generates one, then sends it to the new user.</p>
                     </div>
                     <asp:Button ID="btnAdd" runat="server" Text="Create User" OnClick="btnAdd_Click" CssClass="fcl-btn w-full" />
-                    <asp:Label ID="lblMsg" runat="server" CssClass="block text-xs mt-1"></asp:Label>
+                    <asp:Label ID="lblMsg" runat="server" CssClass="block text-xs mt-1" EnableViewState="false"></asp:Label>
                 </div>
             </div>
 

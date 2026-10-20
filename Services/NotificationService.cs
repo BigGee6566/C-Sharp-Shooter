@@ -1,4 +1,6 @@
+using System;
 using System.Data;
+using System.Diagnostics;
 using ForteLogisticsApp.Data;
 
 namespace ForteLogisticsApp.Services
@@ -16,6 +18,23 @@ namespace ForteLogisticsApp.Services
                 @"INSERT INTO dbo.[Notification] (UserID, ShipmentID, Message, Type)
                   VALUES (@u, @s, @m, @t)",
                 "@u", userId, "@s", (object)shipmentId, "@m", message, "@t", type);
+        }
+
+        /// <summary>
+        /// As <see cref="Send"/>, for use AFTER the real work has committed: a failed
+        /// notification is logged and swallowed, so it can never turn a booking that was saved
+        /// into an error page (and tempt the user into booking it again).
+        /// </summary>
+        public static void TrySend(int userId, int? shipmentId, string message, string type)
+        {
+            try
+            {
+                Send(userId, shipmentId, message, type);
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceError("Notification to user " + userId + " failed: " + ex);
+            }
         }
 
         /// <summary>

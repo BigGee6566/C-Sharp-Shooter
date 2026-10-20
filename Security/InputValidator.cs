@@ -18,9 +18,11 @@ namespace ForteLogisticsApp.Security
     {
         /// <summary>
         /// Trims, and collapses every run of whitespace (including tabs and newlines) to a
-        /// single space. Never returns null. When <paramref name="maxLength"/> is positive the
-        /// result is cut to that many characters, so an over-long paste cannot blow past a
-        /// column width or a log line.
+        /// single space. Invisible characters are dropped: control characters, and format
+        /// characters such as zero-width spaces and right-to-left overrides, which can make a
+        /// stored name or address display as something other than what it is. Never returns
+        /// null. When <paramref name="maxLength"/> is positive the result is cut to that many
+        /// characters, so an over-long paste cannot blow past a column width or a log line.
         /// </summary>
         public static string NormalizeText(string value, int maxLength = 0)
         {
@@ -35,6 +37,7 @@ namespace ForteLogisticsApp.Security
                     inWhitespace = true;
                     continue;
                 }
+                if (IsInvisible(c)) continue;
                 if (inWhitespace && sb.Length > 0) sb.Append(' ');
                 inWhitespace = false;
                 sb.Append(c);
@@ -45,6 +48,30 @@ namespace ForteLogisticsApp.Security
             return result;
         }
 
+        /// <summary>
+        /// For free-form messages: keeps line breaks and tabs, drops other invisible characters,
+        /// trims the ends. Never returns null. Does not cut - callers refuse what is too long.
+        /// </summary>
+        public static string NormalizeMultiline(string value)
+        {
+            if (string.IsNullOrEmpty(value)) return string.Empty;
+            var sb = new StringBuilder(value.Length);
+            foreach (char c in value)
+            {
+                if (c == '\n' || c == '\r' || c == '\t' || !IsInvisible(c)) sb.Append(c);
+            }
+            return sb.ToString().Trim();
+        }
+
+        private static bool IsInvisible(char c)
+        {
+            UnicodeCategory cat = char.GetUnicodeCategory(c);
+            return cat == UnicodeCategory.Control || cat == UnicodeCategory.Format || cat == UnicodeCategory.PrivateUse;
+        }
+
+        /// <summary>The width of User.Email; a longer address could not be stored.</summary>
+        public const int EmailMaxLength = 150;
+
         /// <summary>Trim and lower-case (invariant) so the same address compares equal regardless of how it was typed.</summary>
         public static string NormalizeEmail(string value)
         {
@@ -53,15 +80,20 @@ namespace ForteLogisticsApp.Security
         }
 
         /// <summary>
-        /// A deliberately conservative structural check: exactly one @, a non-empty local part,
-        /// and a domain that contains a dot with something either side. It does not try to be
-        /// RFC 5322 complete - the goal is to reject obvious rubbish before it is stored, not to
-        /// prove deliverability.
+        /// A deliberately conservative structural check: printable ASCII only with no spaces
+        /// (so look-alike Unicode letters cannot impersonate another address), at most
+        /// <see cref="EmailMaxLength"/> characters, exactly one @, a non-empty local part, and a
+        /// domain that contains a dot with something either side. It does not try to be RFC 5322
+        /// complete - the goal is to reject rubbish before it is stored, not to prove deliverability.
         /// </summary>
         public static bool IsValidEmail(string value)
         {
             string email = NormalizeEmail(value);
-            if (email.Length == 0 || email.Length > 254) return false;
+            if (email.Length == 0 || email.Length > EmailMaxLength) return false;
+            foreach (char c in email)
+            {
+                if (c <= ' ' || c > '~') return false;
+            }
 
             int at = email.IndexOf('@');
             if (at <= 0 || at != email.LastIndexOf('@') || at == email.Length - 1) return false;
@@ -100,10 +132,14 @@ namespace ForteLogisticsApp.Security
             return digits >= 7 && digits <= 15;
         }
 
-        /// <summary>A city is free text the customer may type, so this only tidies whitespace and caps the length.</summary>
+        /// <summary>
+        /// A city is free text the customer may type, so this only tidies whitespace and caps the
+        /// length - at the 60-character width of Shipment.OriginCity/DestCity, so a long paste is
+        /// cut rather than failing the INSERT.
+        /// </summary>
         public static string NormalizeCity(string value)
         {
-            return NormalizeText(value, 80);
+            return NormalizeText(value, 60);
         }
 
         /// <summary>
