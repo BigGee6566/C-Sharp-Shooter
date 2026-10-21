@@ -3,6 +3,10 @@
 Everything here works **after you have run `App_Data/Schema.sql`** against your
 `Logisticore` database (it creates the tables and loads all the demo data).
 
+To give the whole team the same data, build a clean copy with
+`App_Data/SEEDDATASCHEMA.sql` and share a backup of it — the steps for making
+the backup and restoring it are at the top and bottom of that file.
+
 > All passwords are case-sensitive.
 
 ---
