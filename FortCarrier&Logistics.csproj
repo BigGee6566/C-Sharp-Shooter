@@ -180,7 +180,9 @@
     <Compile Include="Services\IntakeService.cs" />
     <Compile Include="Services\AccountService.cs" />
     <Compile Include="Services\AdminServices.cs" />
-    <Compile Include="Reports\PeriodReportPage.cs" />
+    <Compile Include="Reports\PeriodReportPage.cs">
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
     <Compile Include="Reports\Comparison.aspx.cs">
       <DependentUpon>Reports\Comparison.aspx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>
