@@ -34,7 +34,19 @@
                                 <span class="material-symbols-outlined text-sm">my_location</span> Share my location
                             </button>
                         </div>
-                        <div id="trackMap" style="height:400px;border-radius:12px;overflow:hidden;z-index:0;"></div>
+                        <div id="map-container">
+                            <div id="trackMap" style="height:400px;border-radius:12px;overflow:hidden;z-index:0;"></div>
+                        </div>
+
+                        <!-- BusNova-style map fallback block -->
+                        <div id="map-fallback" class="bg-surface-container-lowest border border-outline-variant rounded-xl text-center p-6 my-3 shadow-sm" hidden>
+                            <div class="text-4xl mb-2">🗺️</div>
+                            <p class="font-bold text-base text-on-background mb-1">Map tiles are unavailable.</p>
+                            <p class="text-xs text-on-surface-variant mb-4">The live tracking data is still updating, but the map background couldn't load.</p>
+                            <button type="button" class="fcl-btn fcl-btn-primary" data-role="map-retry">
+                                Retry Map
+                            </button>
+                        </div>
                         <div class="flex flex-wrap gap-4 mt-2 text-xs text-on-surface-variant">
                             <span><span style="color:#003399;font-weight:700;">D</span> Destination</span>
                             <span>&#128666; Driver</span>
@@ -106,7 +118,7 @@
         </div>
     </div>
 
-    <script src='<%= ResolveUrl("~/Scripts/livetrack.js") %>'></script>
+    <script src='<%= ResolveUrl("~/Scripts/livetrack.js?v=2") %>'></script>
     <script>
         (function () {
             var hf = document.getElementById('<%= hfTrackWb.ClientID %>');

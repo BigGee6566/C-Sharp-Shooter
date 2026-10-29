@@ -2,7 +2,7 @@
    Uses Leaflet + OpenStreetMap tiles (loaded by Site1.Master). Positions come from
    TrackApi.aspx; the driver/customer share their own position by POSTing a ping. */
 window.FclTrack = (function () {
-    var map, cfg, routeLine, pollTimer, shareWatch = null, simTimer = null, fitted = false;
+    var map, tileLayer, cfg, routeLine, pollTimer, shareWatch = null, simTimer = null, fitted = false;
     var layers = {};
 
     function pin(color, glyph) {
@@ -28,11 +28,25 @@ window.FclTrack = (function () {
     }
     function removeMarker(key) { if (layers[key]) { map.removeLayer(layers[key]); delete layers[key]; } }
 
+    function createTileLayer() {
+        return L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            minZoom: 3,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        });
+    }
+
     function init(elId) {
         map = L.map(elId, { scrollWheelZoom: false });
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-            maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-        }).addTo(map);
+        tileLayer = createTileLayer().addTo(map);
+
+        tileLayer.on('tileerror', function () {
+            var fallbackDiv = document.getElementById('map-fallback');
+            var mapContainer = document.getElementById('map-container');
+            if (fallbackDiv) fallbackDiv.hidden = false;
+            if (mapContainer) mapContainer.style.display = 'none';
+        });
+
         map.setView([-29.0, 25.0], 5);   // roughly centred on South Africa
         return map;
     }
@@ -112,8 +126,38 @@ window.FclTrack = (function () {
         }, (seconds * 1000) / steps);
     }
 
+    function retryTileLayer() {
+        if (!map) return;
+        if (tileLayer) map.removeLayer(tileLayer);
+        tileLayer = createTileLayer().addTo(map);
+        tileLayer.on('tileerror', function () {
+            var fallbackDiv = document.getElementById('map-fallback');
+            var mapContainer = document.getElementById('map-container');
+            if (fallbackDiv) fallbackDiv.hidden = false;
+            if (mapContainer) mapContainer.style.display = 'none';
+        });
+        setTimeout(function () { map.invalidateSize(); }, 100);
+    }
+
     return {
         init: init, load: load, refresh: refresh, postPing: postPing,
-        startShare: startShare, stopShare: stopShare, simulate: simulate
+        startShare: startShare, stopShare: stopShare, simulate: simulate,
+        retryTileLayer: retryTileLayer
     };
 })();
+
+document.addEventListener('DOMContentLoaded', function () {
+    var retryBtn = document.querySelector('[data-role="map-retry"]');
+    if (retryBtn) {
+        retryBtn.addEventListener('click', function () {
+            var fallbackDiv = document.getElementById('map-fallback');
+            var mapContainer = document.getElementById('map-container');
+            if (fallbackDiv) fallbackDiv.hidden = true;
+            if (mapContainer) mapContainer.style.display = 'block';
+
+            if (window.FclTrack && window.FclTrack.retryTileLayer) {
+                window.FclTrack.retryTileLayer();
+            }
+        });
+    }
+});

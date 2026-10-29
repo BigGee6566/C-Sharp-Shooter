@@ -29,7 +29,19 @@
             </div>
 
             <p id="mapStatus" class="text-sm text-on-surface-variant mb-3"></p>
-            <div id="driverMap" style="height:440px;border-radius:12px;overflow:hidden;z-index:0;"></div>
+            <div id="map-container">
+                <div id="driverMap" style="height:440px;border-radius:12px;overflow:hidden;z-index:0;"></div>
+            </div>
+
+            <!-- BusNova-style map fallback block -->
+            <div id="map-fallback" class="bg-surface-container-lowest border border-outline-variant rounded-xl text-center p-6 my-3 shadow-sm" hidden>
+                <div class="text-4xl mb-2">🗺️</div>
+                <p class="font-bold text-base text-on-background mb-1">Map tiles are unavailable.</p>
+                <p class="text-xs text-on-surface-variant mb-4">The live tracking data is still updating, but the map background couldn't load.</p>
+                <button type="button" class="fcl-btn fcl-btn-primary" data-role="map-retry">
+                    Retry Map
+                </button>
+            </div>
 
             <div class="flex flex-wrap gap-4 mt-3 text-xs text-on-surface-variant">
                 <span><span style="color:#1d2b45;font-weight:700;">O</span> Depot</span>
@@ -40,7 +52,7 @@
         </asp:Panel>
     </div>
 
-    <script src='<%= ResolveUrl("~/Scripts/livetrack.js") %>'></script>
+    <script src='<%= ResolveUrl("~/Scripts/livetrack.js?v=2") %>'></script>
     <script>
         (function () {
             var API = '<%= ResolveUrl("~/TrackApi.aspx") %>';
