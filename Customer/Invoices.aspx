@@ -86,7 +86,9 @@
 
     <script>
         var fclInvoices = {
-            checks: function () { return document.querySelectorAll('.fcl-invoice-check'); },
+            checks: function () {
+                return document.querySelectorAll('.fcl-invoice-check input[type="checkbox"], input.fcl-invoice-check[type="checkbox"]');
+            },
             toggleAll: function (master) {
                 var boxes = this.checks();
                 for (var i = 0; i < boxes.length; i++) {
@@ -105,9 +107,12 @@
                 var boxes = this.checks();
                 var count = 0, total = 0;
                 for (var i = 0; i < boxes.length; i++) {
-                    if (boxes[i].checked) {
+                    var box = boxes[i];
+                    if (box.checked && !box.disabled) {
                         count++;
-                        total += parseFloat(boxes[i].getAttribute('data-amount')) || 0;
+                        var parent = box.closest('.fcl-invoice-check') || box;
+                        var amtStr = box.getAttribute('data-amount') || (parent ? parent.getAttribute('data-amount') : '0');
+                        total += parseFloat(amtStr) || 0;
                     }
                 }
                 var countEl = document.getElementById('fclSelectedCount');
@@ -116,6 +121,16 @@
                 if (totalEl) totalEl.textContent = 'R ' + total.toFixed(2);
             }
         };
-        document.addEventListener('DOMContentLoaded', function () { fclInvoices.recalc(); });
+        document.addEventListener('DOMContentLoaded', function () {
+            var table = document.querySelector('table');
+            if (table) {
+                table.addEventListener('change', function (e) {
+                    if (e.target && e.target.type === 'checkbox') {
+                        fclInvoices.recalc();
+                    }
+                });
+            }
+            fclInvoices.recalc();
+        });
     </script>
 </asp:Content>

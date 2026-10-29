@@ -37,14 +37,8 @@ namespace ForteLogisticsApp.CustomerPortal
             if (!IsPostBack)
             {
                 hfIdempotencyKey.Value = Guid.NewGuid().ToString("N");
+                LoadInvoices();
             }
-
-            // Unlike GridView, a Repeater does not recreate its templated child controls from
-            // ViewState - it must be rebound on every request, postback included, or the
-            // per-row checkboxes (and hfPaymentId) simply won't exist yet when ASP.NET applies
-            // the posted form values to them, and chkSelect.Checked would always read false in
-            // the button click handlers below.
-            LoadInvoices();
         }
 
         /// <summary>The caller's own BusinessID, or null if they are not part of a Business.</summary>
@@ -84,10 +78,12 @@ namespace ForteLogisticsApp.CustomerPortal
             if (e.Item.ItemType != ListItemType.Item && e.Item.ItemType != ListItemType.AlternatingItem) return;
 
             var chk = (CheckBox)e.Item.FindControl("chkSelect");
+            if (chk == null) return;
+
             decimal amount = Db.ToDecimal(((DataRowView)e.Item.DataItem)["Amount"]);
-            // Client-side display total only - the amount that is actually charged is always
-            // re-read from the database in PaymentService, never taken from this attribute.
-            chk.Attributes["data-amount"] = amount.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            string amtFormatted = amount.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            chk.Attributes["data-amount"] = amtFormatted;
+            chk.InputAttributes["data-amount"] = amtFormatted;
         }
 
         /// <summary>Collects the PaymentIDs of every ticked, enabled checkbox in the grid.</summary>
@@ -98,10 +94,14 @@ namespace ForteLogisticsApp.CustomerPortal
             {
                 var chk = (CheckBox)item.FindControl("chkSelect");
                 var hf = (HiddenField)item.FindControl("hfPaymentId");
-                if (chk != null && chk.Checked)
+                if (chk != null && hf != null && chk.Enabled)
                 {
-                    int id;
-                    if (int.TryParse(hf.Value, out id)) ids.Add(id);
+                    bool isChecked = chk.Checked || (!string.IsNullOrEmpty(chk.UniqueID) && Request.Form[chk.UniqueID] != null);
+                    if (isChecked)
+                    {
+                        int id;
+                        if (int.TryParse(hf.Value, out id)) ids.Add(id);
+                    }
                 }
             }
             return ids.ToArray();

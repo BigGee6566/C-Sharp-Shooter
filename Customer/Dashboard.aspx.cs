@@ -61,7 +61,7 @@ namespace ForteLogisticsApp.CustomerPortal
         private void LoadData()
         {
             DataTable shipments = Db.Query(
-                @"SELECT TrackingNumber, DestCity, DeliveryStatus, ShipmentDate
+                @"SELECT TOP 5 TrackingNumber, DestCity, DeliveryStatus, ShipmentDate
                   FROM dbo.[Shipment] WHERE SenderID = @u ORDER BY ShipmentDate DESC",
                 "@u", UserId);
 
@@ -69,7 +69,8 @@ namespace ForteLogisticsApp.CustomerPortal
             rptShipments.DataBind();
             pnlNoShipments.Visible = shipments.Rows.Count == 0;
 
-            litTotal.Text = shipments.Rows.Count.ToString();
+            litTotal.Text = Db.ToStr(Db.Scalar(
+                "SELECT COUNT(*) FROM dbo.[Shipment] WHERE SenderID = @u", "@u", UserId));
 
             litActiveShipments.Text = Db.ToStr(Db.Scalar(
                 @"SELECT COUNT(*) FROM dbo.[Shipment]
@@ -89,7 +90,7 @@ namespace ForteLogisticsApp.CustomerPortal
 
             litOutstanding.Text = outstanding.ToString("N2");
 
-            // Only raise the payment callout when there is genuinely something to pay.
+            
             pnlBalanceDue.Visible = outstanding > 0m;
             litBalanceDue.Text = outstanding.ToString("N2");
             litUnpaidCount.Text = unpaidCount.ToString();
@@ -102,7 +103,7 @@ namespace ForteLogisticsApp.CustomerPortal
             rptNotifications.DataBind();
             pnlNoNotifs.Visible = notifications.Rows.Count == 0;
 
-            // Scoped to this customer's own shipments and invoices.
+            
             ChartAssets.Register(this);
             litSummary.Text = RoleDashboards.Render(() => RoleDashboards.Customer(UserId, DateTime.Now, ResolveUrl), null);
         }

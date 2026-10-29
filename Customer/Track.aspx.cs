@@ -36,9 +36,27 @@ namespace ForteLogisticsApp.CustomerPortal
 
         private void LoadMine()
         {
-            DataTable dt = Db.Query(
-                @"SELECT TrackingNumber, DestCity, DeliveryStatus
-                  FROM dbo.[Shipment] WHERE SenderID = @u ORDER BY ShipmentDate DESC", "@u", UserId);
+            string clientType = Db.ToStr(Db.Scalar(
+                "SELECT ClientType FROM dbo.[Client] WHERE UserID = @u", "@u", UserId));
+
+            bool isBusiness = string.Equals(clientType, "Business", StringComparison.OrdinalIgnoreCase);
+
+            DataTable dt;
+            if (isBusiness)
+            {
+                dt = Db.Query(
+                    @"SELECT TOP 50 TrackingNumber, DestCity, DeliveryStatus
+                      FROM dbo.[Shipment] WHERE SenderID = @u ORDER BY ShipmentDate DESC", "@u", UserId);
+            }
+            else
+            {
+                dt = Db.Query(
+                    @"SELECT TrackingNumber, DestCity, DeliveryStatus
+                      FROM dbo.[Shipment]
+                      WHERE SenderID = @u AND DeliveryStatus NOT IN ('Delivered', 'Failed', 'Cancelled')
+                      ORDER BY ShipmentDate DESC", "@u", UserId);
+            }
+
             rptMine.DataSource = dt;
             rptMine.DataBind();
             pnlNoneMine.Visible = dt.Rows.Count == 0;

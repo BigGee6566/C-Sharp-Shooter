@@ -34,7 +34,7 @@
                                 <span class="material-symbols-outlined text-sm">my_location</span> Share my location
                             </button>
                         </div>
-                        <div id="trackMap" style="height:300px;border-radius:12px;overflow:hidden;z-index:0;"></div>
+                        <div id="trackMap" style="height:400px;border-radius:12px;overflow:hidden;z-index:0;"></div>
                         <div class="flex flex-wrap gap-4 mt-2 text-xs text-on-surface-variant">
                             <span><span style="color:#003399;font-weight:700;">D</span> Destination</span>
                             <span>&#128666; Driver</span>
