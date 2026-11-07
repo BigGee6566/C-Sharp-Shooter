@@ -404,6 +404,10 @@
                         <!-- The right-hand cluster folds into the dropdown below md. -->
                         <div class="md:hidden mt-stack-sm pt-stack-sm border-t border-outline-variant flex flex-col gap-1">
                             <asp:Panel ID="pnlTopAuthMobile" runat="server" CssClass="flex flex-col gap-1">
+                                <asp:HyperLink ID="lnkTopDashboardMobile" runat="server" CssClass="fcl-nav-link w-full text-left">
+                                    <span class="material-symbols-outlined">dashboard</span>
+                                    <span>My Dashboard</span>
+                                </asp:HyperLink>
                                 <asp:LinkButton ID="btnLogoutTopMobile" runat="server" OnClick="btnLogout_Click" CssClass="fcl-nav-link w-full text-left">
                                     <span class="material-symbols-outlined">logout</span>
                                     <span>Logout</span>
@@ -424,10 +428,12 @@
 
                     <div class="flex items-center gap-base shrink-0">
                         <asp:Panel ID="pnlTopAuth" runat="server" CssClass="hidden md:flex items-center gap-base">
-                            <span class="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center font-label-md text-label-md font-bold shrink-0">
-                                <asp:Literal ID="litTopAvatar" runat="server" /></span>
-                            <span class="font-label-md text-label-md text-on-surface truncate max-w-[10rem]">
-                                <asp:Literal ID="litTopUserName" runat="server" /></span>
+                            <asp:HyperLink ID="lnkTopProfile" runat="server" CssClass="fcl-nav-link" ToolTip="Go to my dashboard">
+                                <span class="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center font-label-md text-label-md font-bold shrink-0">
+                                    <asp:Literal ID="litTopAvatar" runat="server" /></span>
+                                <span class="font-label-md text-label-md text-on-surface truncate max-w-[10rem]">
+                                    <asp:Literal ID="litTopUserName" runat="server" /></span>
+                            </asp:HyperLink>
                             <asp:LinkButton ID="btnLogoutTop" runat="server" OnClick="btnLogout_Click" CssClass="fcl-nav-link">
                                 <span class="material-symbols-outlined">logout</span>
                                 <span>Logout</span>

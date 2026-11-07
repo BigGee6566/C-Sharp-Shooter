@@ -68,6 +68,9 @@ namespace ForteLogisticsApp
         /// <summary>pnlTopAuth control.</summary>
         protected global::System.Web.UI.WebControls.Panel pnlTopAuth;
 
+        /// <summary>lnkTopProfile control.</summary>
+        protected global::System.Web.UI.WebControls.HyperLink lnkTopProfile;
+
         /// <summary>litTopAvatar control.</summary>
         protected global::System.Web.UI.WebControls.Literal litTopAvatar;
 
@@ -82,6 +85,9 @@ namespace ForteLogisticsApp
 
         /// <summary>pnlTopAuthMobile control.</summary>
         protected global::System.Web.UI.WebControls.Panel pnlTopAuthMobile;
+
+        /// <summary>lnkTopDashboardMobile control.</summary>
+        protected global::System.Web.UI.WebControls.HyperLink lnkTopDashboardMobile;
 
         /// <summary>btnLogoutTopMobile control.</summary>
         protected global::System.Web.UI.WebControls.LinkButton btnLogoutTopMobile;

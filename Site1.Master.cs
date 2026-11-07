@@ -183,6 +183,10 @@ namespace ForteLogisticsApp
                 string fullName = (Session["FullName"] as string) ?? "User";
                 litTopUserName.Text = Server.HtmlEncode(fullName);
                 litTopAvatar.Text = Server.HtmlEncode(Initials(fullName));
+
+                string dashboard = AuthService.DashboardUrl(Role, SecurePage.CurrentUserId());
+                lnkTopProfile.NavigateUrl = dashboard;
+                lnkTopDashboardMobile.NavigateUrl = dashboard;
             }
         }
 
