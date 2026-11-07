@@ -60,7 +60,8 @@ namespace ForteLogisticsApp
                 {
                     return Chrome.TopNav;
                 }
-                if (Matches(page, "~/Login.aspx") || Matches(page, "~/Register.aspx"))
+                if (Matches(page, "~/Login.aspx") || Matches(page, "~/Register.aspx") ||
+                    Matches(page, "~/ForgotPassword.aspx") || Matches(page, "~/ChangePassword.aspx"))
                 {
                     return Chrome.Bare;
                 }

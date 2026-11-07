@@ -102,7 +102,7 @@ namespace ForteLogisticsApp.CustomerPortal
             RequestThrottle.Reset(guessKey);
 
             string newHash = PasswordHelper.Hash(newPw);
-            Db.NonQuery("UPDATE dbo.[User] SET Password = @p WHERE UserID = @u",
+            Db.NonQuery("UPDATE dbo.[User] SET Password = @p, TempPassword = NULL, TempPasswordExpires = NULL WHERE UserID = @u",
                 "@p", newHash, "@u", UserId);
             // Their own change: keep this session signed in (other sessions are ended).
             SessionGuard.Restamp(Session, Role, newHash);

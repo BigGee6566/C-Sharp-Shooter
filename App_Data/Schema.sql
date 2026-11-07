@@ -508,6 +508,16 @@ IF COL_LENGTH('dbo.Route', 'UpdatedDate') IS NULL
     ALTER TABLE dbo.[Route] ADD UpdatedDate DATETIME NULL;
 GO
 
+/* Forgot password: a one-use temporary password, kept apart from Password so that a request
+   made by someone else never locks the real owner out. TempPasswordExpires is UTC. */
+IF COL_LENGTH('dbo.[User]', 'TempPassword') IS NULL
+    ALTER TABLE dbo.[User] ADD TempPassword NVARCHAR(200) NULL;
+GO
+
+IF COL_LENGTH('dbo.[User]', 'TempPasswordExpires') IS NULL
+    ALTER TABLE dbo.[User] ADD TempPasswordExpires DATETIME NULL;
+GO
+
 /* ============================================================
    Live-map position pings (driver + customer shared locations).
    The Track page and the driver map READ the latest ping per

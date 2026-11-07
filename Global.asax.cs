@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Web;
 using ForteLogisticsApp.Data;
+using ForteLogisticsApp.Services;
 
 namespace ForteLogisticsApp
 {
@@ -11,6 +12,19 @@ namespace ForteLogisticsApp
         {
             // Create and seed the LocalDB database on first run.
             DbInitializer.EnsureCreated();
+        }
+
+        /// <summary>
+        /// Holds a session that signed in with a temporary password on the change page. It sits
+        /// here, not in SecurePage, because not every page goes through RequireRole.
+        /// </summary>
+        protected void Application_PostAcquireRequestState(object sender, EventArgs e)
+        {
+            if (Context.Session == null || Context.Session[AuthService.PendingPasswordChangeKey] == null) return;
+            if (AuthService.IsAllowedDuringForcedChange(Request.AppRelativeCurrentExecutionFilePath)) return;
+
+            Response.Redirect(VirtualPathUtility.ToAbsolute("~/ChangePassword.aspx"), false);
+            CompleteRequest();
         }
 
         /// <summary>

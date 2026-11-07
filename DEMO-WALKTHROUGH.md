@@ -166,6 +166,19 @@ handled the handovers."
 
 ---
 
+## Optional scene: a client forgets their password (1 min)
+
+Use a spare customer, such as `customer2@fcl.co.za`, because this changes their password.
+
+| Do | Say |
+|---|---|
+| On **Login**, click **Forgot password?** and enter the client's email. | "A client who is locked out can recover the account themselves." |
+| Show the temporary password and its expiry time. | "It lasts 20 minutes and works once. This project has no mail server, so it appears on screen. A live system would send it to the client's inbox, because anyone who knows an email could otherwise get in. That's why staff and admin accounts are refused and every request is audited." |
+| Sign in with it. Try to open the dashboard from the address bar. | "The temporary password is already spent, and nothing else opens until the client chooses a new one." |
+| Save a new password, then go to the dashboard. | "The client is back in with a password only they know." |
+
+---
+
 ## If something goes wrong while recording
 
 | Problem | Fix |
@@ -176,6 +189,7 @@ handled the handovers."
 | The Create Route button is greyed out | No driver or vehicle is free. The message on the page says so. |
 | Access Denied | You're on a page for a different role. Sign out and use the right login. |
 | "That is a staff account" | Use the **Staff Portal** tab on the login page. |
+| "That temporary password has expired" | More than 20 minutes passed. Request a new one on **Forgot password?**. |
 
 ## Rough edges to avoid showing
 

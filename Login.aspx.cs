@@ -42,14 +42,25 @@ namespace ForteLogisticsApp
         {
             if (!Page.IsValid) return;
 
-            string role = AuthService.Login(txtEmail.Text, txtPassword.Text, Session);
+            PasswordMatch status;
+            string role = AuthService.Login(txtEmail.Text, txtPassword.Text, Session, out status);
 
             if (role == null)
             {
                 int minutes = AuthService.LockoutMinutesRemaining(Session);
                 ShowStatus("error", minutes > 0
                     ? "Too many failed attempts. Please try again in " + minutes + " minute(s)."
-                    : "Incorrect email or password. Please try again.");
+                    : status == PasswordMatch.TemporaryExpired
+                        ? "That temporary password has expired. Please request a new one."
+                        : "Incorrect email or password. Please try again.");
+                return;
+            }
+
+            // Checked before the portal toggle: a mismatch there would undo this sign-in, and
+            // the temporary password has already been spent.
+            if (status == PasswordMatch.Temporary)
+            {
+                Response.Redirect(ResolveUrl("~/ChangePassword.aspx"));
                 return;
             }
 

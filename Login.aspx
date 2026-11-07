@@ -54,7 +54,10 @@
                 </div>
 
                 <div>
-                    <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1" for="<%= txtPassword.ClientID %>">Password</label>
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="block font-label-sm text-label-sm text-on-surface-variant" for="<%= txtPassword.ClientID %>">Password</label>
+                        <a class="fcl-link font-label-sm text-label-sm" href="<%= ResolveUrl("~/ForgotPassword.aspx") %>">Forgot password?</a>
+                    </div>
                     <div class="relative">
                         <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">lock</span>
                         <asp:TextBox ID="txtPassword" runat="server" TextMode="Password" placeholder="Your password" CssClass="fcl-input pl-10 pr-10" />

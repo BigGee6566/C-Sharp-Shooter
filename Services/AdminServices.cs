@@ -136,7 +136,7 @@ namespace ForteLogisticsApp.Services
                     "@n", e.FullName, "@ph", e.Phone, "@a", e.Address, "@r", e.Role, "@u", e.UserId);
                 if (reset)
                 {
-                    Db.NonQuery(conn, tx, "UPDATE dbo.[User] SET Password = @p WHERE UserID = @u", "@p", hash, "@u", e.UserId);
+                    Db.NonQuery(conn, tx, "UPDATE dbo.[User] SET Password = @p, TempPassword = NULL, TempPasswordExpires = NULL WHERE UserID = @u", "@p", hash, "@u", e.UserId);
                 }
 
                 // Role records for the (possibly new) role. Old role rows are kept: billing and
