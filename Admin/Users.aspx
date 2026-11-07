@@ -38,7 +38,7 @@
                 <asp:Panel ID="pnlEClientType" runat="server" CssClass="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-bold text-on-surface uppercase mb-1">Client Type</label>
-                        <asp:DropDownList ID="ddlEClientType" runat="server">
+                        <asp:DropDownList ID="ddlEClientType" runat="server" CssClass="fcl-input">
                             <asp:ListItem>Individual</asp:ListItem><asp:ListItem>Business</asp:ListItem>
                         </asp:DropDownList>
                     </div>
@@ -65,11 +65,11 @@
             </div>
         </asp:Panel>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="grid grid-cols-1 gap-6">
             <!-- Add user -->
             <div class="fcl-card rounded-xl p-6">
                 <h2 class="font-bold text-lg text-brandDark mb-4">Add a User</h2>
-                <div class="space-y-3">
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                     <div>
                         <label class="block text-xs font-bold text-on-surface uppercase mb-1">Full Name *</label>
                         <asp:TextBox ID="txtName" runat="server" CssClass="fcl-input"></asp:TextBox>
@@ -86,12 +86,6 @@
                         </asp:DropDownList>
                     </div>
                     <div>
-                        <label class="flex items-center gap-2 text-xs font-bold text-on-surface uppercase">
-                            <asp:CheckBox ID="chkIsDriver" runat="server" />
-                            Is a driver
-                        </label>
-                    </div>
-                    <div>
                         <label class="block text-xs font-bold text-on-surface uppercase mb-1">Phone</label>
                         <asp:TextBox ID="txtPhone" runat="server" CssClass="fcl-input"></asp:TextBox>
                     </div>
@@ -100,27 +94,38 @@
                         <asp:TextBox ID="txtPassword" runat="server" TextMode="Password" CssClass="fcl-input"></asp:TextBox>
                         <p class="text-xs text-on-surface-variant mt-1">Leave blank and the system generates one, then sends it to the new user.</p>
                     </div>
-                    <asp:Button ID="btnAdd" runat="server" Text="Create User" OnClick="btnAdd_Click" CssClass="fcl-btn w-full" />
-                    <asp:Label ID="lblMsg" runat="server" CssClass="block text-xs mt-1" EnableViewState="false"></asp:Label>
+                    <div class="flex items-center">
+                        <label class="flex items-center gap-2 text-xs font-bold text-on-surface uppercase">
+                            <asp:CheckBox ID="chkIsDriver" runat="server" />
+                            Is a driver
+                        </label>
+                    </div>
+                </div>
+                <div class="mt-4 flex flex-wrap items-center gap-3">
+                    <asp:Button ID="btnAdd" runat="server" Text="Create User" OnClick="btnAdd_Click" CssClass="fcl-btn" />
+                    <asp:Label ID="lblMsg" runat="server" CssClass="block text-xs" EnableViewState="false"></asp:Label>
                 </div>
             </div>
 
             <!-- Users list -->
-            <div class="lg:col-span-2 fcl-card rounded-xl p-6 overflow-x-auto">
+            <div class="min-w-0 fcl-card rounded-xl p-6 overflow-x-auto">
                 <h2 class="font-bold text-lg text-brandDark mb-4">All Users</h2>
                 <asp:Repeater ID="rptUsers" runat="server" OnItemCommand="rptUsers_ItemCommand">
                     <HeaderTemplate>
                         <table class="w-full text-sm text-left">
                             <thead><tr class="text-xs uppercase text-on-surface-variant border-b">
-                                <th class="py-2 pr-3">Name</th><th class="py-2 pr-3">Email</th>
-                                <th class="py-2 pr-3">Role</th><th class="py-2 pr-3">Joined</th><th class="py-2 pr-3"></th>
+                                <th class="py-2 pr-3">Name</th><th class="py-2 pr-3">Email</th><th class="py-2 pr-3">Phone</th>
+                                <th class="py-2 pr-3">Role</th><th class="py-2 pr-3">Account</th><th class="py-2 pr-3">Joined</th>
+                                <th class="py-2 pr-3">Action</th>
                             </tr></thead><tbody>
                     </HeaderTemplate>
                     <ItemTemplate>
                         <tr class="border-b border-outline-variant">
                             <td class="py-2 pr-3 font-semibold text-brandDark"><%# UiHelper.Enc(Eval("FullName")) %></td>
-                            <td class="py-2 pr-3 text-on-surface-variant"><%# UiHelper.Enc(Eval("Email")) %></td>
+                            <td class="py-2 pr-3 text-on-surface-variant break-all"><%# UiHelper.Enc(Eval("Email")) %></td>
+                            <td class="py-2 pr-3 text-on-surface-variant whitespace-nowrap"><%# UiHelper.Enc(Eval("PhoneNumber")) %></td>
                             <td class="py-2 pr-3"><%# ForteLogisticsApp.Services.UiHelper.StatusBadge(Eval("Role").ToString()) %></td>
+                            <td class="py-2 pr-3 text-on-surface-variant whitespace-nowrap"><%# UiHelper.Enc(Eval("AccountDetail")) %></td>
                             <td class="py-2 pr-3 text-on-surface-variant"><%# Eval("CreatedDate", "{0:dd MMM yyyy}") %></td>
                             <td class="py-2 pr-3"><asp:LinkButton runat="server" CommandName="edit" CommandArgument='<%# Eval("UserID") %>' CssClass="text-brandRed font-bold hover:underline">Edit</asp:LinkButton></td>
                         </tr>

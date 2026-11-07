@@ -15,10 +15,10 @@
         </a>
     </header>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-gutter mb-stack-lg">
+    <div class="grid grid-cols-1 gap-gutter mb-stack-lg">
 
         <!-- Scan & sort -->
-        <section class="lg:col-span-1 fcl-card">
+        <section class="fcl-card">
             <h2 class="font-headline-md text-headline-md text-on-background mb-stack-sm">Scan Parcel</h2>
 
             <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1" for="<%= txtScan.ClientID %>">Waybill / Tracking Number</label>
@@ -73,7 +73,7 @@
         </section>
 
         <!-- Sorting queue -->
-        <section class="lg:col-span-2 bg-surface-container-lowest border border-outline-variant rounded-lg overflow-hidden shadow-[0_20px_40px_-15px_rgba(0,51,153,0.04)]">
+        <section class="min-w-0 bg-surface-container-lowest border border-outline-variant rounded-lg overflow-hidden shadow-[0_20px_40px_-15px_rgba(0,51,153,0.04)]">
             <div class="p-stack-md border-b border-outline-variant">
                 <div class="flex justify-between items-center mb-stack-sm">
                     <h2 class="font-headline-md text-headline-md text-on-background">Sorting Queue</h2>
@@ -99,11 +99,11 @@
                     <Columns>
                         <asp:TemplateField HeaderText="Waybill">
                             <ItemTemplate>
-                                <span class="font-semibold text-primary"><%# UiHelper.Enc(Eval("TrackingNumber")) %></span>
+                                <span class="font-semibold text-primary whitespace-nowrap"><%# UiHelper.Enc(Eval("TrackingNumber")) %></span>
                             </ItemTemplate>
                         </asp:TemplateField>
 
-                        <asp:TemplateField HeaderText="Route">
+                        <asp:TemplateField HeaderText="Origin &rarr; Destination">
                             <ItemTemplate>
                                 <%# UiHelper.Enc(Eval("OriginCity")) %> &rarr; <%# UiHelper.Enc(Eval("DestCity")) %>
                             </ItemTemplate>
@@ -111,11 +111,11 @@
 
                         <asp:TemplateField HeaderText="Sort Lane">
                             <ItemTemplate>
-                                <%# UiHelper.Enc(Eval("SortCategory")) %>
+                                <%# Eval("SortCategory") == DBNull.Value ? "Not sorted yet" : UiHelper.Enc(Eval("SortCategory")) %>
                             </ItemTemplate>
                         </asp:TemplateField>
 
-                        <asp:TemplateField HeaderText="Warehouse">
+                        <asp:TemplateField HeaderText="Warehouse Status">
                             <ItemTemplate>
                                 <%# UiHelper.StatusBadge(Eval("WarehouseStatus") as string) %>
                             </ItemTemplate>
@@ -127,7 +127,7 @@
                             </ItemTemplate>
                         </asp:TemplateField>
 
-                        <asp:TemplateField HeaderText="">
+                        <asp:TemplateField HeaderText="Action">
                             <ItemTemplate>
                                 <asp:LinkButton ID="btnLoad" runat="server" CommandName="LoadParcel"
                                     CommandArgument='<%# Eval("TrackingNumber") %>'

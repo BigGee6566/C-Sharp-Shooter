@@ -45,7 +45,15 @@ namespace ForteLogisticsApp.AdminPortal
 
         private void LoadUsers()
         {
-            DataTable dt = Db.Query("SELECT UserID, FullName, Email, Role, CreatedDate FROM dbo.[User] ORDER BY CreatedDate DESC");
+            DataTable dt = Db.Query(
+                @"SELECT u.UserID, u.FullName, u.Email, u.PhoneNumber, u.Role, u.CreatedDate,
+                         CASE WHEN d.UserID IS NOT NULL THEN 'Driver'
+                              WHEN u.Role = 'Customer' THEN ISNULL(c.ClientType, 'Individual')
+                              ELSE '-' END AS AccountDetail
+                  FROM dbo.[User] u
+                  LEFT JOIN dbo.[Client] c ON c.UserID = u.UserID
+                  LEFT JOIN dbo.[Driver] d ON d.UserID = u.UserID
+                  ORDER BY u.CreatedDate DESC");
             rptUsers.DataSource = dt;
             rptUsers.DataBind();
         }
