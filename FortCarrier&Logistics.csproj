@@ -72,6 +72,7 @@
     <Content Include="Web.config" />
     <Content Include="Global.asax" />
     <Content Include="App_Data\Schema.sql" />
+    <Content Include="Images\Hero-section.jpeg" />
     <Content Include="Images\logo.jpeg" />
     <Content Include="Images\C SHARP SHOOTER SYSTEM LOGO.jpeg" />
     <Content Include="Images\NEW LOGO LOGISTICORE.jpg" />

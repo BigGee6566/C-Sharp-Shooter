@@ -19,6 +19,28 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
+        /* The hero photo is a dark dusk scene, so a faint white wash keeps it clear and a navy
+           fade behind the headline carries the light text. Below lg the text spans the full
+           width, so the navy is even rather than a left-hand fade. */
+        .hero-scrim {
+            background:
+                linear-gradient(90deg, rgba(0, 22, 78, 0.6) 0%, rgba(0, 22, 78, 0.3) 45%, rgba(0, 22, 78, 0) 70%),
+                rgba(255, 255, 255, 0.06);
+        }
+        @media (max-width: 1023px) {
+            .hero-scrim { background: rgba(0, 22, 78, 0.45); }
+        }
+        .hero-copy { text-shadow: 0 1px 12px rgba(0, 0, 0, 0.55); }
+        .hero-copy .primary-gradient-btn { text-shadow: none; }
+        .hero-accent {
+            background: linear-gradient(90deg, #bcd8ff 0%, #ff9cc9 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 1px 8px rgba(0, 0, 0, 0.45));
+        }
+        #hero-tool .text-outline { color: rgba(255, 255, 255, 0.8); }
+
         @keyframes pulse-soft {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.8; }
@@ -282,27 +304,27 @@
             <!-- Hero Section -->
             <section class="relative min-h-[600px] lg:min-h-[900px] flex items-center overflow-hidden">
                 <div class="absolute inset-0 z-0">
-                    <div class="absolute inset-0 bg-gradient-to-t from-surface via-surface/80 to-surface/40"></div>
-                    <div class="absolute inset-0 bg-cover bg-center mix-blend-multiply opacity-10"
-                         style="background-image: url('<%= ResolveUrl("~/Images/web/warehousing.jpg") %>')"></div>
+                    <div class="absolute inset-0 bg-cover bg-center"
+                         style="background-image: url('<%= ResolveUrl("~/Images/Hero-section.jpeg") %>')"></div>
+                    <div class="absolute inset-0 hero-scrim"></div>
                 </div>
                 <!-- #track and #quote (below) must not become grid items themselves, or they'd
                      eat a grid cell as empty <span>s - kept outside the grid, inside the section. -->
                 <span id="track"></span>
                 <span id="quote"></span>
-                <div class="relative z-10 w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-12 grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
-                    <div class="flex flex-col justify-center">
-                        <h1 class="font-display-lg text-3xl sm:text-4xl lg:text-5xl xl:text-display-lg text-on-surface mb-6">
-                            PRECISION <br/> <span class="logo-gradient">IN MOTION.</span>
+                <div class="relative z-10 w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-12 py-10 lg:py-0 grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+                    <div class="flex flex-col justify-center hero-copy">
+                        <h1 class="font-display-lg text-3xl sm:text-4xl lg:text-5xl xl:text-display-lg text-white mb-6">
+                            PRECISION <br/> <span class="hero-accent">IN MOTION.</span>
                         </h1>
-                        <p class="font-body-lg text-sm sm:text-base lg:text-body-lg text-on-surface-variant max-w-lg mb-10">
+                        <p class="font-body-lg text-sm sm:text-base lg:text-body-lg text-white max-w-lg mb-10">
                             Next-gen courier and logistics infrastructure designed for global enterprises. We bridge the gap between complex supply chains and rapid-response delivery.
                         </p>
                         <div class="flex flex-col sm:flex-row gap-3">
                             <a href="#services" class="px-8 py-4 primary-gradient-btn text-white font-bold uppercase tracking-widest text-label-sm rounded-xl flex items-center justify-center gap-2">
                                 Explore Services <span class="material-symbols-outlined">arrow_forward</span>
                             </a>
-                            <a href="#solutions" class="px-8 py-4 border border-outline text-primary font-bold uppercase tracking-widest text-label-sm rounded-xl hover:bg-primary/5 transition-all flex items-center justify-center">
+                            <a href="#solutions" class="px-8 py-4 border border-white text-white font-bold uppercase tracking-widest text-label-sm rounded-xl hover:bg-white/10 transition-all flex items-center justify-center">
                                 View Solutions
                             </a>
                         </div>
