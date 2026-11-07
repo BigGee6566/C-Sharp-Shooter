@@ -118,7 +118,7 @@
         </div>
     </div>
 
-    <script src='<%= ResolveUrl("~/Scripts/livetrack.js?v=2") %>'></script>
+    <script src='<%= ResolveUrl("~/Scripts/livetrack.js?v=3") %>'></script>
     <script>
         (function () {
             var hf = document.getElementById('<%= hfTrackWb.ClientID %>');
