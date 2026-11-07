@@ -352,10 +352,12 @@
 
                 <asp:Literal ID="litBell" runat="server" />
 
-                <a class="fcl-nav-link" href="<%= ResolveUrl("~/Contact.aspx") %>">
-                    <span class="material-symbols-outlined">help</span>
-                    <span>Help Centre</span>
-                </a>
+                <asp:PlaceHolder ID="phHelpCentre" runat="server">
+                    <a class="fcl-nav-link" href="<%= ResolveUrl("~/Contact.aspx") %>">
+                        <span class="material-symbols-outlined">help</span>
+                        <span>Help Centre</span>
+                    </a>
+                </asp:PlaceHolder>
 
                 <asp:LinkButton ID="btnLogout" runat="server" OnClick="btnLogout_Click" CssClass="fcl-nav-link w-full text-left">
                     <span class="material-symbols-outlined">logout</span>

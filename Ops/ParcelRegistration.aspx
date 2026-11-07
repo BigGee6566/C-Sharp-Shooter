@@ -1,13 +1,13 @@
 <%@ Page Title="Parcel Registration" Language="C#" MasterPageFile="~/Site1.Master" AutoEventWireup="true" CodeBehind="ParcelRegistration.aspx.cs" Inherits="ForteLogisticsApp.Ops.ParcelRegistration" %>
 
 <asp:Content ID="c1" ContentPlaceHolderID="MainContent" runat="server">
-    <div class="max-w-5xl mx-auto px-4 py-8">
+    <div class="max-w-6xl mx-auto px-4 py-8">
         <p class="text-xs text-on-surface-variant mb-1"><span class="material-symbols-outlined mr-1">home</span> Home / <a href='<%= ResolveUrl("~/Ops/Dashboard.aspx") %>' class="hover:text-brandRed">Operations</a> / <span class="text-brandRed font-semibold">Parcel Registration</span></p>
         <h1 class="text-2xl font-black text-brandDark mb-1">Parcel Registration & Barcode</h1>
         <p class="text-on-surface-variant text-sm mb-6">Capture a walk-in parcel at intake. A unique waybill and scannable barcode are generated automatically.</p>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div class="lg:col-span-2 fcl-card rounded-xl p-6">
+        <div class="grid grid-cols-1 xl:grid-cols-5 gap-6 items-start">
+            <div class="xl:col-span-3 min-w-0 fcl-card rounded-xl p-6">
                 <%-- Matching the sender to an account is what lets automatic invoicing and
                      status notifications reach them, exactly as for an online booking. --%>
                 <div class="mb-4 pb-4 border-b border-outline-variant">
@@ -82,21 +82,23 @@
             </div>
 
             <!-- Printable label -->
-            <div class="fcl-card rounded-xl p-6">
+            <div id="labelCard" class="xl:col-span-2 min-w-0 fcl-card rounded-xl p-6">
                 <h2 class="font-bold text-lg text-brandDark mb-3">Parcel Label</h2>
                 <asp:Panel ID="pnlLabel" runat="server" Visible="false">
                     <div id="labelArea" class="border-2 border-dashed border-outline-variant rounded-lg p-4 text-center">
                         <div class="bg-brandRed text-white font-black inline-block px-2 py-1 rounded text-sm mb-2">FCL</div>
                         <div class="text-xs text-on-surface-variant uppercase">Waybill</div>
-                        <div class="font-black text-brandDark text-lg mb-2"><asp:Literal ID="litWaybill" runat="server"></asp:Literal></div>
-                        <svg id="barcode"></svg>
+                        <div class="font-black text-brandDark text-lg mb-2 break-all"><asp:Literal ID="litWaybill" runat="server"></asp:Literal></div>
+                        <svg id="barcode" class="block w-full max-w-sm mx-auto h-auto"></svg>
                         <div class="text-xs text-on-surface-variant mt-2"><asp:Literal ID="litRoute" runat="server"></asp:Literal></div>
                     </div>
                     <button type="button" onclick="printLabel()" class="fcl-btn fcl-btn-dark w-full mt-4"><span class="material-symbols-outlined mr-1">print</span> Print Label</button>
                     <script>
                         (function () {
                             var v = '<asp:Literal id="litBarcodeVal" runat="server"></asp:Literal>';
-                            if (v && window.JsBarcode) { JsBarcode('#barcode', v, { format: 'CODE128', height: 55, displayValue: false }); }
+                            if (v && window.JsBarcode) { JsBarcode('#barcode', v, { format: 'CODE128', height: 55, displayValue: false, margin: 0 }); }
+                            // Below the xl breakpoint the label sits under the long form, out of view after a postback.
+                            document.getElementById('labelCard').scrollIntoView({ block: 'nearest' });
                         })();
                         function printLabel() {
                             var w = window.open('', '', 'width=420,height=360');

@@ -18,7 +18,11 @@ namespace ForteLogisticsApp.AdminPortal
         protected void Page_Load(object sender, EventArgs e)
         {
             RequireOperationsStaff();
-            if (!IsPostBack) LoadAll();
+            if (!IsPostBack)
+            {
+                FleetAvailability.Sync();
+                LoadAll();
+            }
         }
 
         private void LoadAll()

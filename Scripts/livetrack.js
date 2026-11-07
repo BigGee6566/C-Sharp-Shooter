@@ -28,25 +28,46 @@ window.FclTrack = (function () {
     }
     function removeMarker(key) { if (layers[key]) { map.removeLayer(layers[key]); delete layers[key]; } }
 
-    function createTileLayer() {
-        return L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    var OSM_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+    var TILE_SOURCES = [
+        { url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', maxNativeZoom: 19 },
+        { url: 'https://tile.openstreetmap.de/{z}/{x}/{y}.png', maxNativeZoom: 18 }
+    ];
+    // A single missing tile is normal while panning; only a run of them means the source is down.
+    var TILE_ERRORS_BEFORE_SWITCH = 6;
+
+    function setFallbackVisible(visible) {
+        var fallbackDiv = document.getElementById('map-fallback');
+        if (fallbackDiv) fallbackDiv.hidden = !visible;
+    }
+
+    function showTiles(sourceIndex) {
+        var source = TILE_SOURCES[sourceIndex], errors = 0;
+        if (tileLayer) map.removeLayer(tileLayer);
+
+        tileLayer = L.tileLayer(source.url, {
             maxZoom: 19,
+            maxNativeZoom: source.maxNativeZoom,
             minZoom: 3,
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            attribution: OSM_ATTRIBUTION,
+            // Web.config sends Referrer-Policy: same-origin, which strips the Referer from tile
+            // requests. OSM answers those with a "403 Access blocked" image delivered as HTTP 200,
+            // so tileerror never fires. This overrides the policy for tile images only, and sends
+            // just the site origin, never the page path or its ?wb= waybill.
+            referrerPolicy: 'strict-origin-when-cross-origin'
+        }).addTo(map);
+
+        tileLayer.on('tileerror', function () {
+            errors++;
+            if (errors !== TILE_ERRORS_BEFORE_SWITCH) return;
+            if (sourceIndex + 1 < TILE_SOURCES.length) showTiles(sourceIndex + 1);
+            else setFallbackVisible(true);
         });
     }
 
     function init(elId) {
         map = L.map(elId, { scrollWheelZoom: false });
-        tileLayer = createTileLayer().addTo(map);
-
-        tileLayer.on('tileerror', function () {
-            var fallbackDiv = document.getElementById('map-fallback');
-            var mapContainer = document.getElementById('map-container');
-            if (fallbackDiv) fallbackDiv.hidden = false;
-            if (mapContainer) mapContainer.style.display = 'none';
-        });
-
+        showTiles(0);
         map.setView([-29.0, 25.0], 5);   // roughly centred on South Africa
         return map;
     }
@@ -128,15 +149,8 @@ window.FclTrack = (function () {
 
     function retryTileLayer() {
         if (!map) return;
-        if (tileLayer) map.removeLayer(tileLayer);
-        tileLayer = createTileLayer().addTo(map);
-        tileLayer.on('tileerror', function () {
-            var fallbackDiv = document.getElementById('map-fallback');
-            var mapContainer = document.getElementById('map-container');
-            if (fallbackDiv) fallbackDiv.hidden = false;
-            if (mapContainer) mapContainer.style.display = 'none';
-        });
-        setTimeout(function () { map.invalidateSize(); }, 100);
+        setFallbackVisible(false);
+        showTiles(0);
     }
 
     return {
@@ -150,11 +164,6 @@ document.addEventListener('DOMContentLoaded', function () {
     var retryBtn = document.querySelector('[data-role="map-retry"]');
     if (retryBtn) {
         retryBtn.addEventListener('click', function () {
-            var fallbackDiv = document.getElementById('map-fallback');
-            var mapContainer = document.getElementById('map-container');
-            if (fallbackDiv) fallbackDiv.hidden = true;
-            if (mapContainer) mapContainer.style.display = 'block';
-
             if (window.FclTrack && window.FclTrack.retryTileLayer) {
                 window.FclTrack.retryTileLayer();
             }

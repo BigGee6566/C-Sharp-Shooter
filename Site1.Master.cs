@@ -29,6 +29,16 @@ namespace ForteLogisticsApp
             get { return Session != null && Session["UserID"] != null; }
         }
 
+        private bool IsIndividualCustomer
+        {
+            get
+            {
+                return LoggedIn
+                    && string.Equals(Role, "Customer", StringComparison.OrdinalIgnoreCase)
+                    && !IndividualDashboard.IsBusinessClient(SecurePage.CurrentUserId());
+            }
+        }
+
         /// <summary>Which shell a page wears.</summary>
         private enum Chrome
         {
@@ -129,9 +139,13 @@ namespace ForteLogisticsApp
             pnlAnonLinks.Visible = !LoggedIn;
             btnLogout.Visible = LoggedIn;
 
+            // The Individual rail carries these three as ordinary links, in its own order.
+            bool customer = LoggedIn && string.Equals(Role, "Customer", StringComparison.OrdinalIgnoreCase);
+            bool individual = IsIndividualCustomer;
+            phHelpCentre.Visible = !individual;
+
             // "Create Order" is a customer action; staff and admins register parcels through Ops.
-            btnCreateOrderNav.Visible = LoggedIn &&
-                string.Equals(Role, "Customer", StringComparison.OrdinalIgnoreCase);
+            btnCreateOrderNav.Visible = customer && !individual;
 
             if (LoggedIn)
             {
@@ -139,7 +153,7 @@ namespace ForteLogisticsApp
                 litNavUserName.Text = Server.HtmlEncode(fullName);
                 litNavUserType.Text = Server.HtmlEncode(DescribeRole(Role));
                 litAvatar.Text = Server.HtmlEncode(Initials(fullName));
-                litBell.Text = BuildBell();
+                litBell.Text = individual ? string.Empty : BuildBell();
             }
             else
             {
@@ -281,6 +295,20 @@ namespace ForteLogisticsApp
             switch (Role)
             {
                 case "Customer":
+                    if (IsIndividualCustomer)
+                    {
+                        AddLink(sb, "~/Customer/Dashboard.aspx", "dashboard", "Dashboard");
+                        AddLink(sb, "~/Customer/BookShipment.aspx", "add_circle", "Book a Delivery");
+                        AddLink(sb, "~/Customer/Track.aspx", "location_on", "Track Parcel");
+                        AddLink(sb, "~/Customer/Deliveries.aspx", "package_2", "My Deliveries");
+                        AddLink(sb, "~/Customer/History.aspx", "history", "Delivery History");
+                        AddLink(sb, "~/Customer/Invoices.aspx", "account_balance_wallet", "Payments");
+                        sb.Append(BuildBell());
+                        AddLink(sb, "~/Customer/Profile.aspx", "person", "My Profile");
+                        AddLink(sb, "~/Contact.aspx", "help", "Help &amp; Support");
+                        break;
+                    }
+
                     AddLink(sb, "~/Customer/Dashboard.aspx", "dashboard", "Dashboard");
                     AddLink(sb, "~/Customer/BookShipment.aspx", "add_box", "Book Shipment");
                     AddLink(sb, "~/Customer/Track.aspx", "search", "Track");

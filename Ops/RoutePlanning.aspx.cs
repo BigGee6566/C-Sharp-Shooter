@@ -17,12 +17,16 @@ namespace ForteLogisticsApp.Ops
         protected CheckBoxList cblParcels;
         protected Panel pnlNoParcels, pnlNoRoutes;
         protected Repeater rptRoutes;
-        protected Literal litRouteServiceArea;
+        protected Literal litRouteServiceArea, litFleetNotice;
 
         protected void Page_Load(object sender, EventArgs e)
         {
             RequireOperationsStaff();
-            if (!IsPostBack) LoadAll();
+            if (!IsPostBack)
+            {
+                FleetAvailability.Sync();
+                LoadAll();
+            }
         }
 
         private void LoadAll()
@@ -78,31 +82,31 @@ namespace ForteLogisticsApp.Ops
             ShowRouteServiceArea();
         }
 
-        /// <summary>
-        /// Lists drivers best-first - available before on-route, then lightest load - and
-        /// shows why, so the dispatcher can accept the top entry instead of working it out.
-        /// </summary>
         private void LoadDrivers()
         {
-            DataTable dt = Db.Query(
-                @"SELECT d.UserID AS DriverID,
-                         u.FullName + ' - ' + d.AvailabilityStatus + ' (' +
-                             CAST((SELECT COUNT(*) FROM dbo.[Shipment] s
-                                   WHERE s.DriverID = d.UserID
-                                     AND s.DeliveryStatus IN ('Assigned','OutForDelivery')) AS NVARCHAR(5))
-                             + ' open)' AS Label
-                  FROM dbo.[Driver] d
-                  JOIN dbo.[User] u ON u.UserID = d.UserID
-                  ORDER BY CASE d.AvailabilityStatus
-                               WHEN 'Available' THEN 0 WHEN 'On Route' THEN 1 ELSE 2 END,
-                           (SELECT COUNT(*) FROM dbo.[Shipment] s
-                            WHERE s.DriverID = d.UserID
-                              AND s.DeliveryStatus IN ('Assigned','OutForDelivery')),
-                           u.FullName");
-            ddlDriver.DataSource = dt;
+            ddlDriver.DataSource = FleetAvailability.AvailableDrivers();
             ddlDriver.DataTextField = "Label";
             ddlDriver.DataValueField = "DriverID";
             ddlDriver.DataBind();
+            ShowFleetNotice();
+        }
+
+        /// <summary>Explains an empty driver or vehicle list instead of leaving a blank dropdown.</summary>
+        private void ShowFleetNotice()
+        {
+            bool noDriver = ddlDriver.Items.Count == 0;
+            bool noVehicle = ddlVehicle.Items.Count == 0;
+            btnCreateRoute.Enabled = !noDriver && !noVehicle;
+
+            if (noDriver || noVehicle)
+            {
+                string missing = noDriver && noVehicle ? "No driver or vehicle" : noDriver ? "No driver" : "No vehicle";
+                litFleetNotice.Text = missing + " is free right now. They become available again when their deliveries finish or their route is deactivated.";
+            }
+            else
+            {
+                litFleetNotice.Text = string.Empty;
+            }
         }
 
         /// <summary>Proposes a route name from the busiest waiting sort lane and today's run number.</summary>
@@ -122,11 +126,18 @@ namespace ForteLogisticsApp.Ops
 
         private void LoadVehicles()
         {
-            DataTable dt = Db.Query("SELECT VehicleID, RegistrationNumber + ' (' + VehicleType + ')' AS Label FROM dbo.[Vehicle] ORDER BY RegistrationNumber");
-            ddlVehicle.DataSource = dt;
+            ddlVehicle.DataSource = FleetAvailability.AvailableVehicles();
             ddlVehicle.DataTextField = "Label";
             ddlVehicle.DataValueField = "VehicleID";
             ddlVehicle.DataBind();
+            ShowFleetNotice();
+        }
+
+        private void RefreshFleetLists()
+        {
+            FleetAvailability.Sync();
+            LoadDrivers();
+            LoadVehicles();
         }
 
         private void LoadRoutesDropdown()
@@ -202,6 +213,15 @@ namespace ForteLogisticsApp.Ops
                     return;
                 }
 
+                string conflict = next == "Active" ? FleetAvailability.ReactivationConflict(routeId) : null;
+                if (conflict != null)
+                {
+                    lblRouteMsg.CssClass = UiHelper.AlertClass("error") + " mt-1";
+                    lblRouteMsg.Text = "This route cannot be activated. " + conflict;
+                    LoadRoutesTable();
+                    return;
+                }
+
                 // Status-guarded UPDATE: a concurrent toggle that already moved the route makes
                 // this a no-op (rows = 0) instead of applying a stale change on top of it.
                 int toggled = Db.NonQuery(
@@ -222,7 +242,7 @@ namespace ForteLogisticsApp.Ops
 
                 lblRouteMsg.CssClass = UiHelper.AlertClass("success") + " mt-1";
                 lblRouteMsg.Text = "Route " + (next == "Active" ? "activated." : "deactivated - it no longer accepts new parcel assignments.");
-                LoadDrivers();
+                RefreshFleetLists();
                 LoadRoutesDropdown();
             }
             else if (e.CommandName == "delete")
@@ -255,6 +275,7 @@ namespace ForteLogisticsApp.Ops
                         "@u", UserId, "@e", routeId.ToString());
                     lblRouteMsg.CssClass = UiHelper.AlertClass("success") + " mt-1";
                     lblRouteMsg.Text = "Route deleted.";
+                    RefreshFleetLists();
                     LoadRoutesDropdown();
                 }
             }
@@ -285,7 +306,7 @@ namespace ForteLogisticsApp.Ops
             if (ddlDriver.Items.Count == 0 || ddlVehicle.Items.Count == 0)
             {
                 lblRouteMsg.CssClass = UiHelper.AlertClass("error") + " mt-1";
-                lblRouteMsg.Text = "Add drivers and vehicles under Fleet first.";
+                lblRouteMsg.Text = "A free driver and a free vehicle are needed to create a route.";
                 return;
             }
             if (ddlServiceArea.SelectedValue.Length == 0)
@@ -308,52 +329,21 @@ namespace ForteLogisticsApp.Ops
                 return;
             }
 
-            // Create the route and put its driver On Route atomically, with the driver's
-            // availability transition whitelisted: a route must never be left without its
-            // driver flipped (or vice versa), and an Off Duty driver must not be silently
-            // jumped straight to On Route - that illegal transition is rejected here so the
-            // whole creation rolls back and nothing is written.
-            string createError = null;
-            Db.RunInTransaction((conn, tx) =>
-            {
-                string driverAvail = Db.ToStr(Db.Scalar(conn, tx,
-                    "SELECT AvailabilityStatus FROM dbo.[Driver] WITH (UPDLOCK, ROWLOCK) WHERE UserID = @d",
-                    "@d", driverId));
-
-                bool alreadyOnRoute = string.Equals(driverAvail, "On Route", StringComparison.OrdinalIgnoreCase);
-                if (!alreadyOnRoute && !StateMachine.CanTransition("DriverAvailability", driverAvail, "On Route"))
-                {
-                    createError = "This driver is " + driverAvail +
-                                  " and cannot be put On Route. Set them Available under Fleet first.";
-                    return;   // nothing written yet; the transaction rolls back
-                }
-
-                Db.NonQuery(conn, tx,
-                    @"INSERT INTO dbo.[Route] (RouteName, DriverID, VehicleID, Status, ServiceArea, CreatedBy)
-                      VALUES (@n, @d, @v, 'Active', @sa, @u)",
-                    "@n", txtRouteName.Text.Trim(), "@d", driverId, "@v", vehicleId, "@sa", serviceArea, "@u", UserId);
-
-                if (!alreadyOnRoute)
-                {
-                    // Status-guarded so the flip only lands from the state we validated.
-                    Db.NonQuery(conn, tx,
-                        "UPDATE dbo.[Driver] SET AvailabilityStatus = 'On Route' WHERE UserID = @d AND AvailabilityStatus = @from",
-                        "@d", driverId, "@from", driverAvail);
-                }
-            });
+            string createError = FleetAvailability.CreateRoute(
+                txtRouteName.Text.Trim(), driverId, vehicleId, serviceArea, UserId);
 
             if (createError != null)
             {
                 lblRouteMsg.CssClass = UiHelper.AlertClass("error") + " mt-1";
                 lblRouteMsg.Text = createError;
-                LoadDrivers();
+                RefreshFleetLists();
                 return;
             }
 
             lblRouteMsg.CssClass = UiHelper.AlertClass("success") + " mt-1";
             lblRouteMsg.Text = "Route created.";
             txtRouteName.Text = string.Empty;
-            LoadDrivers();          // the driver is now 'On Route', so re-rank the list
+            RefreshFleetLists();    // the chosen driver and vehicle are taken now
             LoadRoutesDropdown();
             LoadRoutesTable();
             SuggestRouteName();

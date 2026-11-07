@@ -91,6 +91,9 @@
     <Content Include="Notifications.aspx" />
     <Content Include="Error.aspx" />
     <Content Include="Customer\Dashboard.aspx" />
+    <Content Include="Customer\Deliveries.aspx" />
+    <Content Include="Customer\History.aspx" />
+    <Content Include="Controls\DeliveryCards.ascx" />
     <Content Include="Customer\BookShipment.aspx" />
     <Content Include="Customer\Invoices.aspx" />
     <Content Include="Customer\Payment.aspx" />
@@ -153,6 +156,7 @@
     </Compile>
     <Compile Include="Services\AuthService.cs" />
     <Compile Include="Services\AutomationService.cs" />
+    <Compile Include="Services\FleetAvailability.cs" />
     <Compile Include="Services\CourierService.cs" />
     <Compile Include="Services\ParcelSize.cs" />
     <Compile Include="Services\NotificationService.cs" />
@@ -233,6 +237,19 @@
       <DependentUpon>Customer\Dashboard.aspx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>
     </Compile>
+    <Compile Include="Customer\Deliveries.aspx.cs">
+      <DependentUpon>Customer\Deliveries.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Customer\History.aspx.cs">
+      <DependentUpon>Customer\History.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Controls\DeliveryCards.ascx.cs">
+      <DependentUpon>Controls\DeliveryCards.ascx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Services\IndividualDashboard.cs" />
     <Compile Include="Customer\BookShipment.aspx.cs">
       <DependentUpon>Customer\BookShipment.aspx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>

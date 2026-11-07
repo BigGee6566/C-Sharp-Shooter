@@ -1,6 +1,7 @@
 using System;
 using System.Data;
 using System.Web.UI.WebControls;
+using ForteLogisticsApp.Controls;
 using ForteLogisticsApp.Data;
 using ForteLogisticsApp.Security;
 using ForteLogisticsApp.Services;
@@ -8,11 +9,12 @@ using ForteLogisticsApp.Services;
 namespace ForteLogisticsApp.CustomerPortal
 {
     /// <summary>
-    /// Customer landing page: what the signed-in customer has in flight, what has been
-    /// delivered, what they owe, and their most recent notifications.
+    /// Customer landing page. Client.ClientType in the database, not a client-side toggle,
+    /// decides which of two dashboards is shown. A Business customer sees what is in flight,
+    /// what has been delivered, what they owe, analytics and notifications. An Individual
+    /// customer sees a personal view built on <see cref="IndividualDashboard"/>.
     ///
-    /// Every figure here is read from the database for the current UserID. The page
-    /// deliberately shows no metric the schema cannot support.
+    /// Every figure here is read from the database for the current UserID.
     /// </summary>
     public partial class Dashboard : SecurePage
     {
@@ -31,34 +33,59 @@ namespace ForteLogisticsApp.CustomerPortal
         protected Literal litUnpaidCount;
         protected Button btnHeaderCreateOrder;
         protected Literal litSummary;
+        protected Panel pnlIndividual, pnlBusiness, pnlPaymentNeeded;
+        protected Literal litGreeting, litActiveCount, litCompletedCount, litPaymentNeeded;
+        protected HyperLink lnkPayNow;
+        protected TextBox txtQuickTrack;
+        protected LinkButton btnQuickTrack;
+        protected DeliveryCards cardsRecent;
 
         protected void Page_Load(object sender, EventArgs e)
         {
             RequireRole("Customer");
 
-            if (!IsPostBack)
+            if (IsPostBack) return;
+
+            if (IndividualDashboard.IsBusinessClient(UserId))
             {
+                pnlBusiness.Visible = true;
                 litName.Text = Server.HtmlEncode(FullName);
-                litTitle.Text = Server.HtmlEncode(DashboardTitle());
-                LoadData();
+                litTitle.Text = "Business Dashboard";
+                LoadBusinessDashboard();
+            }
+            else
+            {
+                pnlIndividual.Visible = true;
+                LoadIndividualDashboard();
             }
         }
 
-        /// <summary>
-        /// Business and Individual customers get a differently-titled dashboard. The
-        /// distinction is Client.ClientType in the database - not a client-side toggle.
-        /// </summary>
-        private string DashboardTitle()
+        private void LoadIndividualDashboard()
         {
-            string clientType = Db.ToStr(Db.Scalar(
-                "SELECT ClientType FROM dbo.[Client] WHERE UserID = @u", "@u", UserId));
+            litGreeting.Text = Server.HtmlEncode(IndividualDashboard.Greeting(FullName, DateTime.Now));
+            litActiveCount.Text = IndividualDashboard.ActiveCount(UserId).ToString("00");
+            litCompletedCount.Text = IndividualDashboard.CompletedCount(UserId).ToString("00");
+            cardsRecent.Show(IndividualDashboard.Recent(UserId, 3), "You haven't booked a delivery yet.");
 
-            return string.Equals(clientType, "Business", StringComparison.OrdinalIgnoreCase)
-                ? "Business Dashboard"
-                : "My Dashboard";
+            DataTable unpaid = IndividualDashboard.AwaitingPayment(UserId);
+            pnlPaymentNeeded.Visible = unpaid.Rows.Count > 0;
+            if (unpaid.Rows.Count > 0)
+            {
+                litPaymentNeeded.Text = unpaid.Rows.Count == 1
+                    ? "Parcel " + Server.HtmlEncode(Db.ToStr(unpaid.Rows[0]["TrackingNumber"])) + " is waiting for payment before it can be collected."
+                    : unpaid.Rows.Count + " parcels are waiting for payment before they can be collected.";
+                lnkPayNow.NavigateUrl = "~/Customer/Payment.aspx?shipmentId=" + Db.ToInt(unpaid.Rows[0]["ShipmentID"]);
+            }
         }
 
-        private void LoadData()
+        protected void btnQuickTrack_Click(object sender, EventArgs e)
+        {
+            string waybill = InputValidator.NormalizeTrackingNumber(txtQuickTrack.Text);
+            Response.Redirect(ResolveUrl("~/Customer/Track.aspx") +
+                (waybill.Length > 0 ? "?wb=" + Server.UrlEncode(waybill) : string.Empty));
+        }
+
+        private void LoadBusinessDashboard()
         {
             DataTable shipments = Db.Query(
                 @"SELECT TOP 5 TrackingNumber, DestCity, DeliveryStatus, ShipmentDate
