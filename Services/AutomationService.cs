@@ -76,41 +76,6 @@ namespace ForteLogisticsApp.Services
             return count;
         }
 
-        // ------------------------------------------------- route / driver lifecycle
-
-        /// <summary>
-        /// Closes any active route whose parcels have all reached a final state.
-        /// Returns the number of routes completed.
-        /// </summary>
-        public static int CompleteFinishedRoutes()
-        {
-            return Db.NonQuery(
-                @"UPDATE r SET Status = 'Completed', CompletedDate = GETDATE()
-                  FROM dbo.[Route] r
-                  WHERE r.Status = 'Active'
-                    AND EXISTS (SELECT 1 FROM dbo.[Shipment] s WHERE s.RouteID = r.RouteID)
-                    AND NOT EXISTS (SELECT 1 FROM dbo.[Shipment] s
-                                    WHERE s.RouteID = r.RouteID
-                                      AND s.DeliveryStatus NOT IN ('Delivered','Failed'))");
-        }
-
-        /// <summary>
-        /// Returns drivers to 'Available' once they hold no active route and no open parcels.
-        /// 'Off Duty' is excluded on purpose so automation never overrides a manual flag.
-        /// </summary>
-        public static int ReleaseIdleDrivers()
-        {
-            return Db.NonQuery(
-                @"UPDATE d SET AvailabilityStatus = 'Available'
-                  FROM dbo.[Driver] d
-                  WHERE d.AvailabilityStatus = 'On Route'
-                    AND NOT EXISTS (SELECT 1 FROM dbo.[Route] r
-                                    WHERE r.DriverID = d.UserID AND r.Status = 'Active')
-                    AND NOT EXISTS (SELECT 1 FROM dbo.[Shipment] s
-                                    WHERE s.DriverID = d.UserID
-                                      AND s.DeliveryStatus IN ('Assigned','OutForDelivery'))");
-        }
-
         // ------------------------------------------------------------- escalation
 
         /// <summary>
@@ -226,12 +191,11 @@ namespace ForteLogisticsApp.Services
 
             // The parcel just reached a final state, so a route may now be finished
             // and its driver free again.
-            if (CompleteFinishedRoutes() > 0)
+            if (FleetAvailability.Sync() > 0)
             {
                 NotificationService.SendToRole("Staff", null,
                     "A delivery route has been completed and its driver is available again.", "Dispatch");
             }
-            ReleaseIdleDrivers();
         }
 
         /// <summary>Invites the customer to rate the driver instead of waiting for them to visit Track.</summary>

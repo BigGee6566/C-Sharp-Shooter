@@ -1,7 +1,73 @@
 <%@ Page Title="Customer Dashboard" Language="C#" MasterPageFile="~/Site1.Master" AutoEventWireup="true" CodeBehind="Dashboard.aspx.cs" Inherits="ForteLogisticsApp.CustomerPortal.Dashboard" %>
 <%@ Import Namespace="ForteLogisticsApp.Services" %>
+<%@ Register Src="~/Controls/DeliveryCards.ascx" TagPrefix="lc" TagName="DeliveryCards" %>
 
 <asp:Content ID="c1" ContentPlaceHolderID="MainContent" runat="server">
+
+    <asp:Panel ID="pnlIndividual" runat="server" Visible="false" DefaultButton="btnQuickTrack" CssClass="max-w-3xl mx-auto">
+        <header class="mb-stack-md">
+            <h1 class="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-background mb-base">
+                <asp:Literal ID="litGreeting" runat="server" /> <span aria-hidden="true">&#128075;</span></h1>
+            <p class="font-body-md text-body-md text-on-surface-variant">Welcome to your personal delivery dashboard.</p>
+        </header>
+
+        <asp:Panel ID="pnlPaymentNeeded" runat="server" Visible="false"
+            CssClass="fcl-alert fcl-alert-warning flex flex-wrap items-center justify-between gap-base mb-gutter">
+            <span><asp:Literal ID="litPaymentNeeded" runat="server" /></span>
+            <asp:HyperLink ID="lnkPayNow" runat="server" CssClass="font-bold underline shrink-0">Pay now</asp:HyperLink>
+        </asp:Panel>
+
+        <section class="fcl-card mb-gutter">
+            <h2 class="font-headline-md text-headline-md text-on-background mb-stack-sm">Track your parcel</h2>
+            <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1" for="<%= txtQuickTrack.ClientID %>">Tracking number</label>
+            <div class="flex gap-base">
+                <asp:TextBox ID="txtQuickTrack" runat="server" CssClass="fcl-input uppercase" placeholder="e.g. FCL-48210453" />
+                <asp:LinkButton ID="btnQuickTrack" runat="server" OnClick="btnQuickTrack_Click"
+                    CssClass="fcl-btn shrink-0" aria-label="Track parcel">
+                    <span class="material-symbols-outlined" aria-hidden="true">search</span>
+                </asp:LinkButton>
+            </div>
+        </section>
+
+        <section class="grid grid-cols-2 gap-gutter mb-gutter">
+            <div class="fcl-card">
+                <span class="material-symbols-outlined text-primary" aria-hidden="true">package_2</span>
+                <p class="font-headline-lg text-headline-lg text-on-background mt-base"><asp:Literal ID="litActiveCount" runat="server" /></p>
+                <p class="font-body-md text-label-md font-normal text-on-surface-variant">Active deliveries</p>
+            </div>
+            <div class="fcl-card">
+                <span class="material-symbols-outlined text-emerald-700" aria-hidden="true">task_alt</span>
+                <p class="font-headline-lg text-headline-lg text-on-background mt-base"><asp:Literal ID="litCompletedCount" runat="server" /></p>
+                <p class="font-body-md text-label-md font-normal text-on-surface-variant">Completed deliveries</p>
+            </div>
+        </section>
+
+        <section class="mb-gutter">
+            <div class="flex justify-between items-center mb-stack-sm">
+                <h2 class="font-headline-md text-headline-md text-on-background">Recent deliveries</h2>
+                <a href="<%= ResolveUrl("~/Customer/Deliveries.aspx") %>" class="font-label-md text-label-md text-primary hover:underline">View all</a>
+            </div>
+            <div class="bg-surface-container-lowest border border-outline-variant rounded-lg overflow-hidden">
+                <lc:DeliveryCards ID="cardsRecent" runat="server" />
+            </div>
+        </section>
+
+        <section class="fcl-card">
+            <h2 class="font-headline-md text-headline-md text-on-background mb-stack-sm">Quick actions</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-base">
+                <a href="<%= ResolveUrl("~/Customer/BookShipment.aspx") %>" class="fcl-nav-link">
+                    <span class="material-symbols-outlined" aria-hidden="true">add_circle</span><span>Book delivery</span></a>
+                <a href="<%= ResolveUrl("~/Customer/Track.aspx") %>" class="fcl-nav-link">
+                    <span class="material-symbols-outlined" aria-hidden="true">location_on</span><span>Track parcel</span></a>
+                <a href="<%= ResolveUrl("~/Customer/Profile.aspx") %>" class="fcl-nav-link">
+                    <span class="material-symbols-outlined" aria-hidden="true">home_pin</span><span>My addresses</span></a>
+                <a href="<%= ResolveUrl("~/Contact.aspx") %>" class="fcl-nav-link">
+                    <span class="material-symbols-outlined" aria-hidden="true">support_agent</span><span>Get support</span></a>
+            </div>
+        </section>
+    </asp:Panel>
+
+    <asp:Panel ID="pnlBusiness" runat="server" Visible="false">
 
     <!-- Header -->
     <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-stack-lg gap-gutter">
@@ -146,5 +212,7 @@
             </a>
         </div>
         <div class="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 bg-primary-container rounded-full opacity-50 blur-2xl"></div>
+    </asp:Panel>
+
     </asp:Panel>
 </asp:Content>

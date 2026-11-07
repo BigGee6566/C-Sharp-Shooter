@@ -25,6 +25,7 @@
                             <asp:DropDownList ID="ddlVehicle" runat="server" CssClass="fcl-input"></asp:DropDownList>
                         </div>
                     </div>
+                    <p class="text-xs text-on-surface-variant"><asp:Literal ID="litFleetNotice" runat="server" /></p>
                     <div>
                         <label class="block text-xs font-bold text-on-surface uppercase mb-1">Service Area *</label>
                         <asp:DropDownList ID="ddlServiceArea" runat="server" CssClass="fcl-input"></asp:DropDownList>

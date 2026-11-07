@@ -47,6 +47,9 @@ namespace ForteLogisticsApp
         /// <summary>litBell control.</summary>
         protected global::System.Web.UI.WebControls.Literal litBell;
 
+        /// <summary>phHelpCentre control.</summary>
+        protected global::System.Web.UI.WebControls.PlaceHolder phHelpCentre;
+
         /// <summary>btnLogout control.</summary>
         protected global::System.Web.UI.WebControls.LinkButton btnLogout;
 

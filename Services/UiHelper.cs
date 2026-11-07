@@ -71,6 +71,12 @@ namespace ForteLogisticsApp.Services
         /// </summary>
         public static string StatusBadge(string status)
         {
+            return StatusBadge(status, status);
+        }
+
+        /// <summary>The same pill, coloured by <paramref name="status"/> but reading <paramref name="label"/>.</summary>
+        public static string StatusBadge(string status, string label)
+        {
             string color;
             switch (status)
             {
@@ -98,7 +104,7 @@ namespace ForteLogisticsApp.Services
             }
             return "<span class='inline-flex items-center font-label-sm text-label-sm font-semibold " +
                    "px-3 py-1 rounded-full uppercase tracking-wide " + color + "'>" +
-                   HttpUtility.HtmlEncode(status ?? "") + "</span>";
+                   HttpUtility.HtmlEncode(label ?? "") + "</span>";
         }
 
         /// <summary>
